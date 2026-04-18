@@ -1,0 +1,948 @@
+Joint Time-Frequency Resource Scheduling over
+CQF-based TSN-5G System
+Zongrong Cheng
+School of Electronic and
+Information Engineering
+Beijing Jiaotong University
+Beijing, China
+zrcheng@bjtu.edu.cn
+Dong Yang*
+School of Electronic and
+Information Engineering
+Beijing Jiaotong University
+Beijing, China
+dyang@bjtu.edu.cn
+Ruibin Guo
+School of Electronic and
+Information Engineering
+Beijing Jiaotong University
+Beijing, China
+20111022@bjtu.edu.cn
+Weiting Zhang
+School of Electronic and
+Information Engineering
+Beijing Jiaotong University
+Beijing, China
+wtzhang@bjtu.edu.cn
+Abstract—Deterministic communication across the integrated
+time-sensitive networking (TSN) and 5G system (5GS) relies
+on the queue model and network resource scheduling. In this
+paper, we investigate the joint time-frequency resource scheduling
+problem in CQF-based TSN-5GS aiming to improve the number
+of schedulable flows and system load balance. To support the
+integration of CQF-based TSN and 5GS, we propose a time-
+aware packet forwarding strategy for 5GS. By managing the flow
+transmission time intervals and frequency resources, 5GS can
+seamlessly communicate with nearby CQF enabled TSN bridges.
+Given the complexity of network resource scheduling across the
+TSN-5GS, it is difficult for traditional algorithms to obtain the
+optimal scheduling results. Hence, we design a DRL-assisted time-
+frequency resource scheduling algorithm, namely DTF, to jointly
+allocate the time interval and frequency resources in the unit
+of flow. DTF embeds with a two-dimensional matrix of link
+capacity utilization to efficiently learn the relationship between
+different time intervals and capacity utilization. Experimental
+results show that our proposed DTF algorithm can increase the
+schedulable flow number by 54.2% and 3.5x than DeepCQF
+and Naive, respectively. DTF can also achieve a good trade-off
+between runtime and schedulability.
+Index Terms—CQF-based TSN-5GS, deep reinforcement learn-
+ing, resource scheduling.
+I. INTRODUCTION
+Recent years have witnessed a significant development of
+deterministic communication technologies. As an emerging
+paradigm for the deterministic communication, time-sensitive
+networking (TSN) over Ethernet is proposed by IEEE 802.1
+TSN task group aiming to provide the time-sensitive applica-
+tions with bounded latency, jitter, and high reliability. Several
+TSN queue models are defined by TSN standards, such as
+time-aware shaper (TAS), asynchronous traffic shaper (ATS),
+and cyclic queuing and forwarding (CQF) model for traffic
+shaping [1], [2]. Among these queue models, the CQF model
+has been widely adopted due to its ease of use features.
+Although the CQF-based TSN can satisfy the deterministic
+communication demands of time-sensitive applications, it is
+still restricted into the wired network domain. With the rising
+of 5th generation (5G) wireless communication technology,
+more emerging 5G use cases, such as autonomous driving,
+Dong Yang* is the corresponding author.
+remote surgery, virtual reality, etc., need a deterministic end-
+to-end communication guarantee [3]. Unfortunately, the 5G
+system (5GS) cannot support the determinism due to the
+inherent best-effort flow transmission mechanism. Hence, it is
+necessary to integrate CQF-based TSN with 5GS to extend the
+deterministic communication capability from wired network
+into wireless domain.
+The 3rd Generation Partnership Project (3GPP) defines the
+architecture of integrated TSN-5GS, where 5GS is configured
+as a logical TSN bridge to seamlessly communicate with
+nearby TSN bridges [4]. Because the deterministic commu-
+nication relies on network resource scheduling, many related
+works research the resource scheduling problem under the
+TSN-5GS architecture. Based on TAS mechanism, Ginth¨or et
+al. [5] proposed a window-based resource allocation method to
+improve the schedulability in TSN-5GS. Satka et al. designed
+a QoS-aware mapping algorithm to efficiently exchange flows
+between TSN and 5G network domain. Prados-Garzon et al.
+[6] presented a management framework to enable the TSN
+network slicing and inter-working with 5G backhaul. However,
+none of the related works considered resource scheduling in
+CQF-based TSN-5GS as the granularity of scheduling in CQF
+is more fine-grained and complex. Inspired by this, we inves-
+tigate the joint time-frequency resource scheduling problem
+in CQF-based TSN-5GS aiming to improve the number of
+scheduled flows and system load balance.
+Different from other queue models for TSN-5GS, CQF
+schedules the network resources at the granularity of each
+time interval within a hyper cycle. To support the inte-
+gration of CQF-based TSN and 5GS, we propose a time-
+aware packet forwarding strategy for 5GS. By managing the
+time-triggered (TT) flow transmission time intervals on TSN
+translator and allocating enough frequency resources, the 5GS
+can imitate the CQF operation and seamlessly connect with
+nearby CQF enabled TSN bridges. Due to the complexity of
+resource scheduling across CQF-based TSN-5GS, traditional
+algorithms, such as dynamic programming and heuristics, are
+too time cost to search the optimal scheduling results. To
+improve the scheduling efficiency, we design a DRL-assisted
+time-frequency resource scheduling algorithm, namely DTF, to
+jointly allocate time interval and frequency resources for each
+60
+2023 the 15th International Conference on Communication Software and Networks
+979-8-3503-2936-0/23/$31.00 ©2023 IEEE
+2023 15th International Conference on Communication Software and Networks (ICCSN) | 979-8-3503-2936-0/23/$31.00 ©2023 IEEE | DOI: 10.1109/ICCSN57992.2023.10297405
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 02,2024 at 07:24:34 UTC from IEEE Xplore.  Restrictions apply. 
+TT flow. Different from the traditional DRL resource schedul-
+ing algorithms that separately perceive time intervals and
+link capacity utilization, DTF embeds with a two-dimensional
+matrix of link capacity utilization to efficiently learn the
+relationship between time intervals and capacity utilization.
+Experimental results show that our proposed DTF algorithm
+in CQF-based TSN-5GS can increase the number of schedu-
+lable TT flows by 54.2% and 3.5x than DeepCQF and Naive,
+respectively. DTF can also achieve the best load balance with
+lower computational time cost. The contributions of this paper
+are listed as follows:
+• We propose a time-aware packet forwarding strategy for
+5GS to support the integration with CQF-based TSN. By
+managing the flow transmission time intervals on TSN
+translator and frequency resources, 5GS can seamlessly
+communicate with nearby CQF enabled TSN bridges.
+• We design a DRL-assisted time-frequency resource
+scheduling algorithm, namely DTF, applied into CQF-
+based TSN-5GS for the first time. DTF embeds with
+a two-dimensional matrix of link capacity utilization to
+efficiently learn the relationship between different time
+intervals and capacity utilization.
+The remainder of this paper is organized as follows. Section
+II introduces the architecture of TSN-5GS and our proposed
+strategy for 5GS integrated with CQF-based TSN. Section
+III formulates the joint time-frequency scheduling problem in
+TSN-5GS. Section IV designs the DTF algorithm for network
+resource scheduling. Section V evaluates the scheduling per-
+formance. Finally, our work is summarized in Section VI.
+II. CQF-BASED SYSTEM MODEL FOR TSN-5GS
+This section describes the architecture of TSN-5GS. To
+support integration with CQF-based TSN standard, we propose
+a time-aware packet forwarding strategy for 5GS.
+A. TSN-5GS Architecture
+The centralized architecture of TSN-5GS is defined by the
+3rd Generation Partnership Project (3GPP) shown in Fig. 1.
+In data plane, the 5GS is regarded as a logical TSN bridge
+embedded into wired TSN system. 5GS is able to support
+most of the relevant TSN protocols, such as generic precision
+time protocol (gPTP), network configuration protocol (NET-
+CONF), and VLAN-tagged stream filtering protocols. This
+is achieved by introducing the device-side and network-side
+TSN translators (i.e., DS-TT and NW-TT, respectively) in
+5GS. The TSN translators can accurately compute the time
+difference between TSN and 5GS domains, and utilize the
+hold and forward buffering mechanism [7] to reduce the flow
+transmission latency and jitter (i.e., latency variance) from end
+to end. The real-time transmission guarantee across the entire
+system owes to network resource scheduling for each flow
+planned by the controller in control plane. Centralized network
+configuration (CNC) is the main component of controller. The
+end-to-end network resource scheduling task is computed by
+CNC equipped with efficient resource scheduling algorithms.
+All the TSN entities, including TSN hosts and bridges in the
+TSN host 
+(H1)
+TSN bridge 
+(S2)
+TSN bridge 
+(S1)
+TSN host 
+(H3)
+TSN-5GS Control Plane
+5GS logical bridge
+gNB
+UE
+DS-TT
+ UPF NW
+-TT
+CNC
+TSN AF
+Data Plane
+Packets
+Cyclic queues
+Cyclic queues
+Q1
+Q2
+Q1
+Q2
+Signaling
+Interacting
+Q2
+Q1
+C = Close, O = Open
+Q1
+Q2
+T0
+T1
+C
+O
+O
+C
+Rx-
+gate Q1
+Q2
+T0
+T1
+C
+O
+O
+C
+Rx-
+gate
+Q1
+Q2
+T0
+T1
+O
+C
+C
+O
+Tx-
+gate Q1
+Q2
+T0
+T1
+O
+C
+C
+O
+Tx-
+gate
+C = Close, O = Open
+Rx-gate
+Tx-gate
+TSN host 
+(H2)
+Signaling
+Signaling
+Signaling
+Signaling
+Fig. 1. Architecture of TSN-5GS supporting CQF mechanism.
+management domain, provide exposure interfaces toward CNC
+to receive the signaling for configuration. The TSN application
+function (AF) communicates with CNC and delivers the port
+and bridge information to TSN translators in 5GS. Based on
+the architecture, we focus on the network resource scheduling
+problem with CQF-based TSN-5GS in this paper.
+B. CQF-based System Model
+CQF mechanism is an ease of use queue model in TSN to
+provide the deterministic transmission guarantee for TT flows
+across the network. We define the set of TT flows as F. Each
+TT flow fi ∈F is featured by its flow period pi, source
+host srci, destination host dsti, flow path pthi, packet size
+si, packet number ni, requirements of end-to-end latency Li,
+and jitter Ji. Hence, the flow tuple is
+fi = {pi, srci, dsti, pthi, si, ni, Li, Ji}.
+(1)
+To shape the TT flows, CQF maintains two cyclic queues
+Q1 and Q2 periodically performing the queuing operations in
+each hyper cycle. As depicted by Fig. 1, we assume two time
+intervals T0 and T1 within a hyper cycle. During the even
+time interval T0, the Q1 opens the Tx-gate to send flows, and
+Q2 opens the Rx-gate to receive the flows. During the odd
+time interval T1, the queues operate conversely. IEEE 802.1
+Qch standard [2] requires that all the sending flows from the
+upstream node in a time interval must be received by the
+downstream node within the same time interval. The received
+flows will continue to be forwarded in the next time interval.
+As such, the transmission delay between any two adjacent
+nodes can be constrained by one time interval. However, due to
+the different working mechanism between 5GS and wired TSN
+system, the CQF mechanism in TSN cannot be directly applied
+into TSN-5GS. Hence, we investigate the new approach to
+support the CQF mechanism from end to end in TSN-5GS.
+Regarding the 5GS as a logical TSN bridge, we propose
+a time-aware packet forwarding strategy for 5GS to imitate
+the CQF operation in the time dimension to connect with the
+adjacent TSN bridges. Specifically, to ensure all the sending
+flows from TSN bridge being received by 5GS within one time
+interval Tξ, enough frequency resources (i.e., sub-carriers of
+61
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 02,2024 at 07:24:34 UTC from IEEE Xplore.  Restrictions apply. 
+S1→UE
+UE→gNB
+gNB→S2
+Delay by 
+NW-TT
+T0
+T1
+T2
+i
+t
+t
+t
+t
+I0
+I1
+T3
+…
+…
+…
+Time Interval
+1
+s
+T
+Fig. 2. An example of using time-aware packet forwarding strategy for 5GS.
+orthogonal frequency division multiplexing (OFDM) system)
+should be allocated for transmitting the flows during Tξ.
+Based on the hold and forward buffering mechanism of TSN
+translators, the received flows on 5GS device are stored into
+the buffer of TSN translator and wait to be sent until the next
+time interval. Fig. 2 describes an example of utilizing our
+proposed strategy. A packet of flow is sent from TSN bridge
+S1 to UE during time interval T1. After processing on UE, the
+packet is transmitted at timestamp I0. Carried by a set of sub-
+carriers, the packet is received by 5G base station (gNB) at
+timestamp I1 in the same time interval T1. Then, the received
+packet waits on NW-TT, and continues to be forwarded at
+the next time interval T2. In the process, the delays between
+DS-TT/NW-TT and UE/gNB are neglected because the link
+distance between them is short and bandwidth is large enough
+in our system. Based on our proposed strategy, TSN-5GS
+supports the CQF mechanism from end to end. Thus, the end-
+to-end latency D and jitter ∆only depend on the number of
+hops and time interval length, which is described by
+ (N −1) × T ≤D ≤(N + 1) × T ,
+∆≤2 × T ,
+(2)
+where N denotes the number of hops that the flow goes
+through, and T is the length of time interval.
+III. PROBLEM STATEMENT AND FORMULATION
+This section describes the joint time-frequency resource
+scheduling problem and then makes the problem formulation.
+A. Joint Time and Frequency Resource Scheduling Problem
+Based on the CQF mechanism, the flow transmission
+through TSN-5GS faces both the time and frequency schedul-
+ing problems. First, the time interval scheduling problem is
+described by Fig. 3. In time interval T0, the TSN host H1
+sends two packets, denoted as pkt1.1 and pkt1.2, respectively
+to TSN bridge S1. And TSN host H2 sends one packet pkt2.1
+to S1. According to the network topology in Fig. 1, S1 will
+forward the packets toward 5GS in the next time interval
+T1. We assume that each time interval can accommodate two
+packets at most. As such, the packet pkt2.1 will be dropped
+by the S1 because it exceeds the time interval capacity of T1.
+In contrast, if we postpone the sending time of pkt2.1 to time
+H1→S1
+H2→S1
+S1→5GS
+T0
+T1
+T2
+t
+t
+t
+T3
+…
+…
+…
+Delay
+Drop
+Success
+1.1
+1.2
+2.1
+2.1
+1.1
+1.2
+2.1
+2.1
+Fig. 3. Time interval scheduling for each flow.
+S1→UE
+UE→gNB
+gNB→S2
+T0
+T1
+T2
+i
+t
+t
+t
+t
+I0
+I1
+T3
+…
+…
+…
+I’0
+I’1
+Drop
+1.1
+1.2
+1.1
+1.2
+1.1
+1.2
+Too many 
+reserved 
+frequency 
+resources 
+1
+s
+T
+Delay by 
+NW-TT
+1.1
+1.1
+Fig. 4. 5GS bandwidth allocation for each flow.
+interval T1 on the host H2, the pkt2.1 will be successfully
+forwarded during time interval T2 by S1. Hence, the time
+interval scheduling from the TSN host for each flow is very
+important. Second, Fig. 4 describes the frequency resource
+scheduling problem. When forwarding packets pkt1.1 and
+pkt1.2 from UE to gNB, the sub-carriers in 5GS should be
+allocated to the packets. However, too many sub-carriers are
+reserved for carrying pkt1.1, and pkt1.2 cannot acquire enough
+5GS bandwidth to be transmitted within the time interval T1.
+This leads to packet loss. Therefore, both the time interval
+and frequency resources need to be scheduled to improve the
+network performance.
+B. Problem Formulation
+We formulate the joint time-frequency resource scheduling
+problem mentioned in Section III-A as the multiple objective
+optimization problem. The objective goals include maximizing
+the number of schedulable flows and system load balance. To
+measure the scheduling performance on the objective goals, we
+define functions ϕ(·) and C (·) that indicate the successfully
+scheduled flows and load balance, respectively. Hence, the
+objective goals can be formulated as
+Maximize
+α
+|F|
+X
+i=1
+ϕi(ξ, B) −βC (fi, ζ),
+(3)
+where |F| is the number of flows, and α, β ∈[0, 1]. If the flow
+fi can be successfully scheduled by allocating the time interval
+Tξ and 5GS bandwidth B, then ϕi(ξ, B) = 1, otherwise zero.
+62
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 02,2024 at 07:24:34 UTC from IEEE Xplore.  Restrictions apply. 
+The function C (fi, ζ) computes the standard deviation of time
+interval utilization, and it has
+C (fi, ζ) =
+v
+u
+u
+t1
+ζ
+ζ−1
+X
+ξ=0
+(ρξ −¯ρ),
+(4)
+where ζ is the number of time intervals in one hyper cycle. ρξ
+denotes resource utilization of time interval Tξ, and ¯ρ is the
+average time interval utilization. In addition, the optimization
+problem is subjected to several constraints. To ensure that the
+TSN-5GS periodically performs CQF operations, the hyper
+cycle Hc is defined as the least common multiple of all the
+flow periods. Let LCM(·) be the function that computes the
+least common multiple. Hence,
+Hc = LCM({p1, p2, p3, . . . , p|F|}).
+(5)
+The granularity for resource scheduling with CQF mecha-
+nism is each time interval. It means that all the flow periods
+should be divisible by the predefined time interval. Thus, the
+maximal length of time interval T should be the greatest
+common divisor of all the flow periods. Let GCD(·) be the
+function of greatest common divisor. Hence, it has
+T ≤GCD({p1, p2, p3, . . . , p|F|}).
+(6)
+To guarantee the high-reliable flow transmission across the
+network, the total size of packets sending at each time interval
+should be no larger than the maximal time interval capacity
+Tc. Let the function ψξ(·) denote whether the time interval Tξ
+is allocated for the packet. It means ψξ(·) = 1 if the packet
+is mapped into Tξ, otherwise zero. Therefore, this capacity
+constraint can be formulated as
+|F|
+X
+i=1
+ni
+X
+m=1
+si × ψξ(pktm
+i ) ≤Tc,
+(7)
+where the m-th packet of flow fi is denoted as pktm
+i . Specifi-
+cally, the time interval capacity Tc depends on link bandwidth.
+In wired TSN network side, the Tc is computed by
+Tc = η × W × T ,
+(8)
+where η ∈(0, 1] is the efficiency of time interval utilization,
+and W denotes the link bandwidth. In 5GS side, the Tc is
+related to 5GS bandwidth B, time interval length, and signal
+to interference plus noise ratio γ. Hence, it has
+Tc = η × B × log2(1 + γ) × T ,
+(9)
+where γ relies on the power of transmitter ϑ, channel gain gℓℓ
+between the UE and gNB, and interference from other links.
+As a result, the γ is described by
+γ =
+ϑ × gℓℓ
+1 + P
+ℓ′∈L ϑ′ × gℓ′ℓ
+,
+(10)
+where ℓ′ is the link that interferes ℓ, and gℓ′ℓis the gain of
+interference from ℓ′ to ℓ. The transmission power on link
+ℓ′ is denoted by ϑ′. As gNB schedules the flows in each
+transmission time interval (TTI), the transmission time for
+each packet between UE and gNB should be no later than
+a TTI length Γ, that is I1 −I0 ≤Γ. Moreover, based on our
+proposed time-aware packet forwarding strategy in 5GS, any
+packets sent from UE/gNB at time interval Tξ must be received
+by gNB/UE within the same time interval. Let T s
+ξ be the start
+timestamp of Tξ shown in Fig. 2. Hence, I1 −T s
+ξ ≤T . And
+the received packets at time interval Tξ cannot be forwarded
+until the next time interval Tξ+1 arrives, that is
+T ≤I1 −T s
+ξ + δ ≤2 × T ,
+(11)
+where δ is the time delay on TSN translators. For each TT
+flow, the sending time fi.˜o from the host should be no later
+than its flow period. This constraint can effectively avoid the
+flows in different periods preempting the limited resources at
+the same port. Thus it has 0 ≤fi.˜o ≤pi.
+To satisfy with the deterministic requirements of end-to-
+end latency R(i)
+d
+and jitter R(i)
+j , the transmission of each flow
+should be constrained by Di ≤R(i)
+d , ∆i ≤R(i)
+j .
+IV. DTF: DRL-ASSISTED TIME-FREQUENCY RESOURCE
+SCHEDULING ALGORITHM
+To solve the joint time-frequency resource scheduling prob-
+lem, we transform the formulated problem into a Markov
+Decision Process (MDP). The core elements of MDP include
+state space, action space, and reward. The state space is
+composed by the flow features of
+t and time-frequency resource
+utilization ou
+t at each step t. Therefore, the state ot = of
+t ∪ou
+t .
+Specifically, the flow features in of
+t are the same with Eq. (1),
+of
+t = {pt, srct, dstt, ptht, st, nt, Lt, Jt}.
+(12)
+The ou
+t reflects the utilization of time interval and frequency
+resources on each link. Considering the link capacity within
+each time interval can measure the time-frequency resource
+utilization, we define uℓi
+Tξ as the utilization of capacity on link
+ℓi during time interval Tξ. Thus,
+ou
+t = {uℓ1
+T0, uℓ2
+T0, uℓ3
+T0, . . . , uℓL
+T0,
+uℓ1
+T1, uℓ2
+T1, uℓ3
+T1, . . . , uℓL
+T1,
+...
+...
+...
+uℓ1
+Tµ, uℓ2
+Tµ, uℓ3
+Tµ, . . . , uℓL
+Tµ}.
+(13)
+The action space comprises a set of time intervals in one
+hyper cycle and the 5GS bandwidth waiting to be allocated
+for each TT flow. At each step t, the action at is to allocate
+one time interval Tt and 5GS bandwidth for flow ft. Instead
+of directly allocating a large number of 5GS sub-carriers, we
+reduce the action space of 5GS bandwidth allocation. We use
+Bt ∈{0, 1} to denote whether the bandwidth is allocated for
+ft, i.e., Bt = 1 if ft can acquire the 5GS bandwidth, otherwise
+zero. Once Bt = 1 holds, we allocate the 5GS bandwidth with
+lower limit that supports the flow transmission in the valid
+duration. Hence, the at is described by at = {Tt, Bt}.
+The immediate reward rt+1 at each step t is related to the
+scheduled flow number and load balance. Let ra
+t+1 and rb
+t+1
+be the shaping reward of scheduled flows and load balance,
+respectively. Thus, the total reward is rt+1 = σa × ra
+t+1 +
+63
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 02,2024 at 07:24:34 UTC from IEEE Xplore.  Restrictions apply. 
+σb × rb
+t+1, where σa, σb ∈[−1, 0]. In specific, ra
+t+1 relies on
+the flow number, and rb
+t+1 is the difference of load balance
+between two consecutive steps. Hence,
+
+
+
+ra
+t+1 =
+Θt+1 −|F|
+ −λaΘt −|F|
+,
+rb
+t+1 =
+max(ou
+t+1) −Ξ
+ −λbmax(ou
+t ) −Ξ
+,
+ra
+t+1 ≤0, rb
+t+1 ≥0,
+(14)
+where λa, λb ∈[0, 1]. The scheduled flow number at step t is
+denoted as Θt. The max(ou
+t ) represents the maximal usage of
+link capacity, and Ξ is the ideal occupancy of link capacity.
+Moreover, if all the flows can be successfully scheduled, an
+additional large reward can be obtained.
+Based on the transformed MDP, we design a DRL-assisted
+time-frequency resource scheduling algorithm, namely DTF,
+to jointly schedule the time interval and frequency resources
+in TSN-5GS. In particular, a two-dimensional matrix of link
+capacity utilization according to Eq. (13) is embedded into
+DTF as the observation ot. Each row of the matrix denotes
+a time interval, and each column indicates a link. The uℓi
+Tξ
+is the intersection point of each row and column. This ma-
+trix can effectively assist the agent to learn the relationship
+between different time intervals and capacity utilization. To
+extract the key features from the two-dimensional capacity
+utilization matrix, the convolutional neural network (CNN)
+can be introduced for training. The pseudo code of DTF is
+listed in Alg. 1 In line 1-8, the agent observes the current
+capacity utilization matrix ot, and makes a time-frequency
+resource allocation decision at based on the mapping policy
+π : O →A. As we use the value-based DRL framework, the
+action with maximal Q-value will be chosen. The Q-value,
+which is computed by the action-value function Qπ(o, a), can
+reflect the long-term revenue, where
+Qπ(o, a) = E
+
+rt+1 + γQπ(ot+1, at+1)
+ot = o, at = a, π
+
+.
+(15)
+After taking the action, the immediate reward and next
+state can be obtained, and they are stored into replay buffer.
+In line 9-18, the agent samples a batch of trajectories from
+replay buffer and trains the neural networks. DTF maintains
+two CNNs (i.e., evaluation and target CNNs) with the same
+structure. The evaluation CNN is trained by updating pa-
+rameter ω to minimize the loss, where the loss function is
+lo =
+1
+Es
+b
+PEs
+b
+j=1(yj −Q(oj, aj; ω))2. In specific,
+yj =
+
+
+
+rj,
+if done,
+rj + γQ′(o′
+j, arg max
+a′
+j∈A
+Q(o′
+j, a′
+j; ω); ω−), otherwise,
+(16)
+and the parameter ω−of target CNN can be replaced by ω of
+the evaluation CNN every κ steps.
+V. SIMULATION AND PERFORMANCE EVALUATION
+This section describes the simulation settings of CQF-based
+TSN-5GS and evaluates the scheduling performance of our
+proposed algorithm.
+Algorithm 1: DTF algorithm for joint time-frequency
+resource scheduling.
+Input: Empty replay buffer Eb, Initial network
+parameters ω and ω−, Replay buffer size Cr,
+Training batch size Es
+b , Action space A.
+Output: Optimal policy π∗.
+1 for episode e ∈{1, 2, . . . , ep} do
+2
+Initialize the state o;
+3
+for step t ∈{1, 2, . . . , st} do
+4
+Allocate time-frequency resources for flow ft
+based on Q(ot, at; ω) values;
+5
+Receive an immediate reward rt+1;
+6
+Transit to the next state ot+1;
+7
+Store tuple (ot, at, rt+1, ot+1, done) into Eb;
+8
+Replace the oldest tuple if |Eb| > Cr;
+9
+Sample a minibatch of Es
+b tuples
+(o, a, r, o′, done) from Eb;
+10
+Define amax(o′; ω) = arg max
+a′∈A
+Q(o′, a′; ω);
+11
+Determine yj =
+ r,
+if done,
+r + γQ′(o′, amax(o′; ω); ω−),
+otherwise;
+12
+Perform a gradient decent step with loss
+L = E[(yj −Q(o, a; ω))2];
+13
+Reset ω−= ω every κ steps;
+14
+if done then
+15
+break;
+16
+end
+17
+end
+18 end
+A. Settings for TSN-5GS and DTF algorithm
+Settings for CQF-based TSN-5GS: The benchmark sim-
+ulation topology, which has 3 TSN hosts, 2 TSN bridges,
+and one 5GS using frequency-division duplex (FDD) mode,
+is shown in Fig. 1. The link bandwidth of wired TSN is set
+to 1000Mbps. The frequency band of 5GS is 3.7∼3.8GHz,
+and 5GS bandwidth is 40MHz. The transmitting power of
+gNB and UE are 40dBm and 20dBm, respectively. In terms
+of the indoor hotspot LOS scenario [8], the channel gain is
+PL(dB) = 32.4+17.3 log10(l5G)+20 log10(fc), where we set
+l5G = 100m denoting the distance between UE and gNB, and
+fc is center frequency. The Gaussian noise power is -104dBm.
+1000 TT flows with periods {4ms, 8ms, 16ms} are scheduled
+in TSN-5GS. The packet size is in the range of 50B∼1KB
+[9]. The time interval is set to 4ms, and TTI in 5GS is 1ms.
+Settings for DTF algorithm: We use two convolution
+layers, followed by one fully-connected layer in CNNs. Based
+on our experience, the kernel size of each layer is set to
+3 × 3, and the stride is 1. The sizes of sample batch and
+replay buffer is set to 32 and 1e4, respectively. We adopt the
+Adam optimizer with 1 × 10−4 learning rate. The discounting
+factor γ is set to 0.9 to acquire the long-term reward. For the
+shaping reward, we set the parameters σa = −1, σb = −0.1
+64
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 02,2024 at 07:24:34 UTC from IEEE Xplore.  Restrictions apply. 
+0
+2000
+4000
+6000
+8000
+10000
+Episodes
+0
+200
+400
+600
+800
+1000
+Reward
+1000 Flows | Time Slot=4ms | Periods=[4ms,8ms,16ms]
+DTF
+DeepCQF
+Naive
+(a)
+0
+2000
+4000
+6000
+8000
+10000
+Episodes
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+Load Balance
+1000 Flows | Time Slot=4ms | Periods=[4ms,8ms,16ms]
+DTF
+DeepCQF
+Naive
+(b)
+Fig. 5. Training process. (a) Training on the total reward; and (b) Training
+for system load balance.
+1000 Flows | Time Slot=4ms | Periods=[4ms,8ms,16ms]
+200
+400
+600
+800
+1000
+Number of Flows
+0
+1
+2
+3
+4
+5
+6
+7
+Time Cost (s)
+DTF
+DeepCQF
+Naive
+(a)
+1000 Flows | periods=[4ms,8ms,16ms]
+DTF
+Naive
+DeepCQF
+Scheduling Approaches
+0
+200
+400
+600
+800
+1000
+Scheduled Number
+Interval=1ms 
+Interval=2ms 
+Interval=4ms
+(b)
+Fig. 6. scheduling results. (a) Comparison of time cost; and (b) Comparison
+of schedulable flow number.
+to emphasize the importance of schedulable flow number. And
+the other parameters λa and λb are both set to 1.
+B. Performance Evaluation
+We evaluate the scheduling performance of our DTF algo-
+rithm on Python implementations. The experimental results are
+described as follows.
+Convergence comparison: The training process of different
+scheduling algorithms is depicted by Fig. 5. We compare our
+DTF algorithm with other benchmarks, which are DeepCQF
+[10] and Naive [11], respectively in CQF-based TSN-5GS.
+The DeepCQF schedules time interval resources by using two
+fully-connected layers, and each layer has 1000 neurons. The
+naive randomly allocates time and frequency resources for
+each TT flow. After 10,000 episodes, Fig. 5(a) shows that DTF
+improves 54.2% and 3.5x schedulable flow number than Deep-
+CQF and Naive, respectively. This is because DTF can jointly
+consider time interval and frequency resources allocation for
+each flow, while DeepCQF only schedules time intervals and
+ignores the frequency resources that leads to the inadequate
+resource utilization. Moreover, the two-dimensional capacity
+utilization matrix embedded in DTF can effectively assist the
+agent to learn the relationship between time intervals and link
+capacity utilization. Fig. 5(b) shows the DTF also achieves the
+best load balance.
+Scheduling Performance: As shown in Fig. 6(a), the
+computational time cost for DTF and Naive are almost the
+same as the number of TT flows increases. DeepCQF spends
+more time to compute the scheduling results because of
+the iterative searching process with exchanging mode. By
+changing the time interval length in Fig. 6(b), the DTF can
+always schedule the most number of flows. In addition, the
+schedulable flow number increases as the time interval length
+gets larger because more capacity can be used to accommodate
+TT flows in each time interval.
+VI. CONCLUSION
+In this paper, we have investigated the joint time-frequency
+resource scheduling problem in CQF-based TSN-5GS. We
+have proposed a time-aware packet forwarding strategy for
+5GS to support CQF scheduling from end to end. Our strategy
+manages the network resources in finer granularity compared
+with the existing methods focusing on other queue models.
+To efficiently improve the scheduling performance, the DTF
+algorithm has been designed. Experimental results show that
+our proposed scheduling algorithm can achieve a good trade-
+off between runtime and schedulability. Different from tra-
+ditional DRL resource scheduling algorithms, our DTF can
+better learn the relationship between time intervals and link
+capacity utilization. For the future work, we will investigate
+mixed-flow transmission in CQF-based TSN-5GS.
+ACKNOWLEDGMENT
+This work was supported in part by the National Key
+Research and Development Program of China under Grant
+2022YFB2901302, in part by the National Natural Science
+Foundation of China under Grant 62201029, in part by
+the China Postdoctoral Science Foundation under Grants
+2022M710007 and BX20220029.
+REFERENCES
+[1] “IEEE Standard for Local and Metropolitan Area Networks – Bridges
+and Bridged Networks - Amendment 25: Enhancements for Scheduled
+Traffic,” IEEE Std 802.1Qbv-2015, pp. 1–57, Mar. 2016.
+[2] “IEEE Standard for Local and Metropolitan Area Networks – Bridges
+and Bridged Networks – Amendment 29: Cyclic Queuing and Forward-
+ing,” IEEE Std. 802.1Qch-2017, pp. 1–30, June 2017.
+[3] D. Yang, Z. Cheng, W. Zhang, H. Zhang, and X. Shen, “Burst-Aware
+Time-Triggered Flow Scheduling With Enhanced Multi-CQF in Time-
+Sensitive Networks,” IEEE/ACM Trans. Networking, pp. 1–16, Apr.
+2023.
+[4] 3GPP, “TS 23.501 V16.7.0 System Architecture for the 5G System,”
+Dec. 2020.
+[5] D. Ginth¨or, R. Guillaume, M. Sch¨ungel, and H. D. Schotten, “Robust
+End-to-End Schedules for Wireless Time-Sensitive Networks under
+Correlated Large-scale Fading,” in Proc. IEEE WFCS, June 2021, pp.
+115–122.
+[6] J. Prados-Garzon, T. Taleb, and M. Bagaa, “LEARNET: Reinforcement
+Learning Based Flow Scheduling for Asynchronous Deterministic Net-
+works,” in Proc. IEEE ICC, June 2020, pp. 1–6.
+[7] Y. Kang, S. Lee, S. Gwak, T. Kim, and D. An, “Time-sensitive Network-
+ing Technologies for Industrial Automation in Wireless Communication
+Systems,” Energies, vol. 14, no. 15, p. 4497, July 2021.
+[8] M. Series, “Guidelines for Evaluation of Radio Interface Technologies
+for IMT-2020,” Report ITU, pp. 2412–0, Oct. 2017.
+[9] Industrial Internet Consortium, “Time Sensitive Networks for Flexible
+Manufacturing Testbed Characterization and Mapping of Converged
+Traffic Types,” Mar. 2019.
+[10] Z. Cheng, D. Yang, W. Zhang, J. Ren, H. Wang, and H. Zhang,
+“DeepCQF: Making CQF Scheduling More Intelligent and Practicable,”
+in Proc. IEEE ICC, May 2022, pp. 1–6.
+[11] J. Yan, W. Quan, X. Jiang, and Z. Sun, “Injection Time Planning:
+Making CQF Practical in Time-Sensitive Networking,” in Proc. IEEE
+INFOCOM, July 2020, pp. 616–625.
+65
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 02,2024 at 07:24:34 UTC from IEEE Xplore.  Restrictions apply. 

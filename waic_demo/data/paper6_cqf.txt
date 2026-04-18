@@ -1,0 +1,768 @@
+Joint Routing and Scheduling for CQF 
+Yang Liu  
+School of Electronic and 
+Information Engineering 
+Beijing Jiaotong University 
+Beijing,China 
+19120080@bjtu.edu.cn 
+ 
+Zongrong Cheng 
+School of Electronic and 
+Information Engineering) 
+Beijing Jiaotong University 
+Beijing,China 
+19111010@bjtu.edu.cn 
+ 
+Jie Ren 
+School of Electronic and 
+Information Engineering 
+Beijing Jiaotong University 
+Beijing,China 
+21111028@bjtu.edu.cn 
+ 
+Dong Yang 
+School of Electronic and 
+Information Engineering 
+Beijing Jiaotong University 
+Beijing,China 
+dyang@bjtu.edu. 
+Abstract—Cyclic Queuing and Forwarding (CQF, a.k.a IEEE 
+802.1Qch) has been proposed to satisfy the demands of predictable 
+deterministic latency only related to the number of hops. However, 
+IEEE 802.1Qch only introduces the principle and working 
+mechanism of CQF. There are still many open problems worth 
+exploring to make CQF practical in real dynamic application 
+scenarios. To achieve deterministic end-to-end latency by 
+efficiently allocating the real flows with limited bandwidth 
+resources, this paper proposes a reinforcement learning based 
+joint routing and scheduling algorithm. We transform the CQF 
+into formulated model and orchestrate path in consideration of 
+hardware resources and latency requirements to accommodate 
+more scheduled flows. Experimental results show that the 
+proposed algorithm can achieve good performance in transmission 
+stability and latency certainty than RIP. 
+Keywords—time-sensitive networking, CQF, reinforcement 
+learning, scheduling algorithm 
+I. INTRODUCTION 
+In traditional Ethernet, data is sent in best-effort service 
+which emphasizes transmission sequence with no guarantee of 
+time. Some service categories can have good performance, but 
+when the end-to-end latency requirements is precise, the tailing 
+problem of the traditional latency curve comes out. 
+Consequently, Time-Sensitive Networking (TSN), a series of 
+standards developed by the IEEE 802.1 TSN working group, 
+was proposed to solve deterministic forwarding service of flows 
+at the physical link layer. Moreover, TSN has the ability to 
+ensure the limited ultra-low latency and variation (jitter) 
+demands for the transmission of industrial control data. [1].   
+The most important mechanism is traffic shaper for 
+deterministic 
+forwarding 
+services 
+in 
+TSN 
+whose 
+implementation is provided by Time-Aware Scheduler (TAS, 
+a.k.a IEEE 802.1Qbv) and Cyclic Queuing and Forwarding 
+(CQF, a.k.a IEEE 802.1Qch). TAS requires precise control of 
+the Gate-Control Lists (GCL) at each outgoing port of a switch. 
+The GCL is used to define when the gate attached to each queue 
+opens or closes. But in some scenarios, such as process 
+automation, when there are forwarding state transitions in need 
+of communication or the measured variable exceeds the defined 
+boundary, the transmission time cannot be precisely predicted. 
+Consequently, TAS relying on precise GCL control is not 
+perfectly suitable for this kind of traffic scenario. One 
+compromise for the flexibility is reduced requirements with 
+respect to acceptable latency and jitter guarantees [2]. For this 
+reason, an additional Traffic Shaper called CQF is being 
+developed. 
+As the name implies, the principle of CQF is that flows are 
+transmitted and queued in a periodic manner during network 
+path transmission. The time is divided into numbered time slots 
+with the same duration in which data flows are transmitted. All 
+switches and terminal devices have a common start time and 
+duration. The total latency is only related to the duration and 
+hops between sender and receiver regardless of topology. 
+Therefore, CQF can perform well when ill-conditioned 
+topologies or other topologies that bring huge latencies occur, 
+which greatly reduces the requirements for transmission time 
+accuracy. The topological problems in the IEEE 802.1Qbv is 
+solved [3]. When the mapping between the traffic and queues is 
+allocated in TSN, there are eight Cos priorities (PCP, Priority 
+Code Point) to implement communication with soft and hard 
+real-time requirements according to the type of data flows [4]. 
+For example, priorities 7, 4, 3, 2, 1, and 0 can be used to transmit 
+Best Effort (BE) flows; Priority 5 is assigned to the CQF shaper 
+and priority level 6 to the TAS. Various priorities are conducive 
+to the cooperative work between different types of shapers. 
+IEEE 802.1Qch only elaborates on the principles of per-
+stream filtering 
+and policing. 
+In 
+terms 
+of 
+specific 
+implementation schemes, it remains to be explored, resolved 
+and optimized. The intention of this paper is to formulate CQF 
+mechanism and propose a joint routing and scheduling 
+implementation scheme based on the reinforcement learning 
+(RL)scheme to be deployed in the real system. 
+Several works have addressed the performance on resource 
+allocation and scheduling problems. The joint task assignment 
+and resource allocation for DNN Inference is investigated in 
+IIoT [5]. For mapping and utilizing resources, how to use RL 
+for CPU memory resources in computers is described [6]; RL 
+scheme is also introduced for Asynchronous Traffic Shaper 
+(ATS) in deterministic networks [7][8]. The model of the leaky 
+bucket token scheme is optimized to maximize the interests of 
+network operators based on UBS in ATS [9], Reference [10] is 
+aiming at the algorithm combination of LRQ, TBE and 
+Paternoster in ATS, then simulate and analyze the algorithm in 
+joint queuing scheduling mechanism; In contrast to this, the 
+original intension of this paper is the hardware-based CQF 
+shaper scheme based on the combination of forwarding and 
+scheduling in Linux. There are joint scheduling schemes for 
+streams of different priorities [11][12].  Reference [11] is 
+combining AVB with Time-Trigger (TT) streams to propose a 
+GRASP-based meta-heuristic method to search for schedulable 
+solutions. Reference [12] is to combine AVB and TT flows 
+planning for joint unified scheduling, using the KSP algorithm 
+to generate routes, and then GRASP will establish a feasible 
+solution to find the optimal scheduling scheme. The federated 
+487
+2022 The 7th International Conference on Computer and Communication Systems
+978-1-6654-5060-7/22/$31.00 ©2022 IEEE
+2022 7th International Conference on Computer and Communication Systems (ICCCS) | 978-1-6654-5060-7/22/$31.00 ©2022 IEEE | DOI: 10.1109/ICCCS55155.2022.9846349
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:22:22 UTC from IEEE Xplore.  Restrictions apply. 
+learning based multi-agent approach is implemented in 
+Distributed Industrial IoT [13]. the joint routing scheduling 
+scheme is introduced for CSQF (Circular Designated Queue 
+Forwarding) in large-scale deterministic IP networks. One 
+algorithm is based on column generation and dynamic 
+programming to model the problem as an extension of multi-
+commodity flows, and analyze its NP- Hard model, the other is 
+to use reinforcement learning to improve the solution [14]. 
+Reference [15] is to map CQF in TSN to hardware resources, 
+on a fixed path, optimize the start time of time-sensitive flows 
+into the network with DSK (Domain-Specific Knowledge) and 
+finally speed up the search process and generates solutions that 
+maximize the revenue of operators. In comparison, the novelty 
+of this paper is that the end-to-end latency of CQF should be 
+optimized in combination with the transmission path of the 
+flows, so that the end-to-end latency meets the accuracy 
+requirements. 
+In this paper, we propose a joint routing and scheduling 
+algorithm based on reinforcement learning for CQF. The main 
+contributions of the paper can be summarized as follows: First, 
+we introduce an orchestration architecture that arrange the 
+network resources of devices by applying pre-trained models to 
+flexible and effective resource management. Second, we 
+formulate a routing and scheduling allocation problem model to 
+maximize the number of scheduled flows while meeting the 
+latency and bandwidth resource requirements. Third, based on 
+the allocation model, we propose a reinforcement learning 
+algorithm to make path planning decisions in the industrial 
+Internet. 
+The remainder of this paper is organized as follows. In 
+Section II, we introduce the system model. In Section III, joint 
+spatial and temporal traffic scheduling optimization allocation 
+problem is formulated and transformed, and reinforcement 
+learning based algorithm is proposed to solve the transformed 
+problem. Section IV presents the experimental results for the 
+proposed algorithm and Section V concludes this paper. 
+II. SYSTEM MODEL 
+The CQF system architecture is composed of a control plane 
+and a data plane. The main component of the centralized control 
+layer is the Centralized Network Controller (CNC) which is 
+responsible for algorithm calculation. The device layer includes 
+TSN switches and terminal computers for sending and receiving. 
+The TSN switches receive CQF gate information for forwarding 
+configuration, and then forward data. The framework 
+implemented in the CQF system is shown in Fig. 1. 
+Before further elaboration of CQF transmission model, we 
+introduce the working mechanism of CQF. CQF has two queues, 
+one for reception and the other for transmission. As shown in 
+Fig. 2, when the data flow enters the switch, the receiving gate 
+of 𝑄1  opens. The arriving data enter 𝑄1  in cycle T. 
+Meanwhile, the output sending gate of 𝑄2  opens, Data 
+transmitted to the next switch; After some gap following the 
+transmission of the last frame in the buffer, the next cycle T 
+arrives. the output sending gate of 𝑄1 opens and sends the 
+frames received in the previous cycle, the receiving gate of 𝑄2 
+open and starts to receive new frames. This cycle goes back and 
+forth to achieve transmission in a fixed duration. The  
+CNC(Centralized Network Controller)
+Flow Data
+Flow Data
+Network Data
+Scheduled 
+Data
+Scheduled 
+Data
+Scheduled Data
+Scheduled Data
+Network Data
+host1
+host2
+TSN Switch1
+TSN Switch2
+ 
+Fig. 1. CQF system architecture. 
+Q1
+Q2
+Sending gate
+Receiving gate
+ 
+Fig. 2. CQF mechanism in duration T 
+of internal data ensures that the latency of each hop of data does 
+not exceed 2T. Since the latency of each hop is a fixed value, 
+the end-to-end latency is only related to the number of hops of 
+the path regardless of topology [3]. 
+  As shown in the step 1 in Fig.3, when host1 sends 
+messages to host 2, the flow data is submitted to CNC for 
+information registration. For each flow, there are source, 
+destination, priority, period, maximum frame number, 
+maximum 
+frame 
+length, 
+and 
+maximum 
+end-to-end 
+latency. ∀𝑓𝑖∈𝐹, 𝑖∈[1, 𝑛] 
+ 
+max
+{
+,
+,
+,
+,
+,
+}
+if
+src dst priority period length latency
+=
+ 
+(1) 
+As shown in the step 2, at the same time, the TSN 
+switches need to submit the current network topology status 
+to the CNC. In the network topology, 𝑢𝑗𝑘 indicates whether 
+the link between switch j and k is connected, 1 for being 
+connected. 𝐵𝑗𝑘
+𝑚𝑎𝑥denotes the maximum bandwidth allowed 
+for transmission between switch i and j. 
+max
+,
+[1,
+]
+0 1
+jk
+j k
+dev
+j
+k
+u
+or
+
+
+
+=
+，
+，
+ 
+ 
+:{
+}
+jk
+status
+B
+ 
+max
+:{
+,
+}
+jk
+jk
+topo
+u
+B
+ 
+(2)  
+So far, the required flow and topology information have 
+been registered in the CNC. Then, as shown in the step 3. CNC 
+sends path and gate control information to the switches for 
+forwarding. 
+There are multiple periods of flows for transmission. It is 
+necessary to ensure that all flows can be completely 
+transmitted within the common cycle. GCL needs to switch 
+gates regularly. The hyper period of the entire system is the 
+least common multiple of all flow periods. 
+ 
+( .
+)
+system
+period
+LCM F periods
+=
+ 
+(3)  
+488
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:22:22 UTC from IEEE Xplore.  Restrictions apply. 
+User
+CQF switches
+CNC
+Algorithm
+CQF switches
+Flow data  
+Topology  
+Path;
+Gate control
+ 
+ 
+Fig. 3. order of CQF system 
+During flow transmission, each switch has a unit as 
+scheduling time slot which represents the duration gate is 
+opened. To ensure that all flows can be perfectly interleaved 
+in the time slots, the period of each flow must be divisible by 
+slot duration. Naturally, the maximum value of the time slot 
+is the greatest common divisor of all scheduled flow periods. 
+While flows are correctly scheduled with time slot in CQF, 
+the buffer in switches must be able to fully accommodate all 
+flows during slots. There is no need to worry about buffer 
+length. As a result, the minimum value of time slot is 
+required for completely transmitting the largest packet 
+among flows.  
+         
+   (4) 
+where 𝑑𝑠𝑦𝑛𝑐 denotes the precise synchronization delay in 
+system. 𝑑𝑝𝑟𝑜𝑐 denotes the processing delay from being 
+received by switch to entering buffer. 𝑑𝑝𝑟𝑜𝑝 denotes the 
+link propagation delay in transmission. Meanwhile, there is 
+another queuing delay required to complete one-hop 
+transmission, which is waiting for the gate to be opened in 
+the buffer queue. In the minimum constraint for only one 
+packet, no packet before is in the queue. Therefore, queuing 
+delay is equal to 0. 
+Besides, the end-to-end latency meets the maximum latency 
+requirement in relation to the time slot size and the number of 
+hops in the link. Therefore, the latency constraint is, ∀𝑓𝑖∈
+𝐹, 𝑖∈[1, 𝑛]: 
+ 
+max
+( )*T
+( )
+i
+i
+hop f
+latency
+f
+
+ 
+5  
+At this time, the total bandwidth of all flows being 
+transmitted cannot exceed the maximum bandwidth in each link. 
+so the bandwidth constraint is: 
+ 
+max
+i
+num
+l
+l
+f
+F
+MTU
+pkt
+v
+B
+T
+
+
+
+
+
+
+ 
+(6) 
+where 𝛼 denotes the adjustment coefficient ranging from 0 to 
+1, the links are composed by 𝑙∈{𝑙1, 𝑙2, … } in the topology, in 
+other words, in the case of 𝑢𝑗𝑘= 1 .  𝑣𝑙= 0 𝑜𝑟 1  which 
+indicates whether the flow passes through the link. 
+The maximum link bandwidth utilization rate occupied in 
+the topology can be expressed as follow： 
+ 
+,
+[1, ]
+max
+*
+max
+i l
+l
+i
+n
+l
+l
+B
+v
+y
+B
+
+=
+
+ 
+(7)  
+The parameter to measure the optimal forwarding path is 
+y. We set y as the maximum link bandwidth utilization rate 
+occupied in the topology. The smaller the y is, the more 
+balanced the bandwidth distribution is, and the better the 
+planned routing path is planned. 
+To apply the above CQF mathematical model to practice, 
+we design a joint routing and scheduling algorithm based on 
+reinforcement learning, namely JRSA. This is introduced in 
+the next section. 
+III. JRSA: JOINT ROUTING AND SCHEDULING ALGORITHM 
+FOR CQF 
+Solving formula problems through traditional SMT solver is 
+time consuming. In order to guarantee the high speed of 
+scheduling tasks, we take reinforcement learning as a solution. 
+The learning mechanism of RL is that the agent takes actions to 
+repeatedly interact with the environment to obtain the greatest 
+reward. In the industrial Internet, the agent is acted by CNC, 
+and everything else is considered to be the environment. There 
+are three key elements in the RL, which are environmental 
+states, actions, and rewards, respectively： 
+1) State space: The state space denotes as 𝑆 covers the 
+current occupied bandwidth information. For each time slot 
+t, the agent can obtain the state space of the Industrial 
+Internet at time slot t as follows： 
+ 
+( )
+( )
+( )
+1
+2
+( )
+{
+,
+,
+,
+}
+n
+l
+l
+l
+s t
+B
+t
+B
+t
+B
+t
+=
+ 
+(8)  
+2) Action space: Once the environment state is observed, 
+the agent makes a decision based on the strategy π, the 
+decision made in the time slot t is： 
+ 
+,
+,
+( )
+{
+( ),
+( )}
+i l
+i l
+a t
+v
+t B
+t
+=
+ 
+(9)  
+3) Reward: Once the action 𝑎(𝑡) is made based on the 
+observed state, the agent will immediately receive the reward 
+𝑟(𝑡). 
+ 
+ 
+(10)  
+where y represents the maximum utilization of links in the 
+industrial Internet in the time slot t, which indicates that the 
+action space has a direct impact on the transmission of flows. 
+However, when the conditions cannot be met, there will be 
+constant rewards. 
+We adopt Q-learning to realize CQF model among the 
+reinforcement learning algorithms. The reward is associated 
+with the maximum utilization of links. As a result, during each 
+update of Q value, we choose the minimum rather than 
+maximum value to find the optimal path. Accordingly, we 
+define the action-value function 𝑄(𝑠, 𝑎)  as the expected 
+cumulative reward from the initial state. 
+ 
+ 
+489
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:22:22 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE I. JOINT ROUTING AND SCHEDULING ALGORITHM 
+Algorithm: JRSA 
+input: source, determination and maximum allowable latency of each flow; 
+topology: 𝑡𝑜𝑝𝑜: {𝑢𝑗𝑘, 𝐵𝑗𝑘
+𝑚𝑎𝑥} 
+time slot duration 𝑇 
+initialize 𝑄(𝑠(𝑡), 𝑎(𝑡)) arbitrarily; 
+output: percentage of successfully scheduled flow; 
+for episode 𝑒∈{1,2, … , 𝑀} do 
+initialize s(t) 
+for time slot 𝑡∈{1,2, … , 𝐾} do 
+for flow 𝑖∈{1,2, … , 𝑛} do 
+choose a(t) from s(t) from 𝑄(𝑠(𝑡), 𝑎(𝑡)) based on 𝜀-greedy policy; 
+update 𝐵𝑙, total time latency and maximum bandwidth utilization y, 
+𝑟(𝑡) = 𝑦; 
+      if 𝐵𝑙> 𝛼𝐵𝑙
+𝑚𝑎𝑥 or 𝑙𝑎𝑡𝑒𝑛𝑐𝑦> 𝑙𝑎𝑡𝑒𝑛𝑐𝑦𝑖
+𝑚𝑎𝑥 
+   𝑟(𝑡) = 1; 
+   Drop the packet; 
+      update 𝑄(𝑠(𝑡), 𝑎(𝑡)); 
+      update 𝑠(𝑡) ←𝑠(𝑡+ 1); 
+      if 𝑎(𝑡) = 𝑑𝑠𝑡 
+the transmission of flow i ends 
+end for 
+end for 
+ 
+(
+1)
+( ( ), ( ))
+( ( ), ( ))
+[ ( )
+min
+( (
+1), ( +1))
+( ( ), ( ))]
+a t
+Q s t a t
+Q s t a t
+r t
+Q s t
+a t
+Q s t a t
+
+
++
+
++
++
++
+−
+(11) 
+The training process of JRSA is shown in Table 1. First, the 
+current topology is initialized by 𝑡𝑜𝑝𝑜: {𝑢𝑗𝑘, 𝐵𝑗𝑘
+𝑚𝑎𝑥}, source, 
+destination, and time slot duration of the input flows. Packets 
+are sent at the beginning. Second, in each episode, the current 
+state space is initialized. Third, in each time slot duration, the 
+packets in each node are being transmitted. The link bandwidth 
+is calculated based on the flow’s action for next hop. At the 
+same time, the maximum bandwidth utilization y in the 
+topology is updated for the reward to train the algorithm. If the 
+bandwidth of the link exceeds the maximum limit or the total 
+time is larger than the maximum latency, the packet is dropped 
+and the reward is set to 1 for punishment. Then, the bandwidth 
+state of link is updated. Next node of flow is determined. While 
+the flow arrives at the destination, the scheduling for this flow 
+ends. As mentioned above, repeatedly, all flows are scheduled. 
+Finally, the algorithm is completely trained. Percentage of 
+successfully scheduled flows comes out as the explicit 
+evaluating indicator. 
+IV. EXPERIMENTS 
+In this section, we first evaluate the performance of the 
+algorithm through Python software simulation. Then we put the 
+JRSA algorithm in the CNC to realize the end-to-end 
+scheduling of the real data flows in the actual system. 
+A. Simulation Environment 
+In topology selection, Ethernet topologies have the 
+following common types: star, tree, linear, and ring. In the 
+industrial Internet, a ring topology is usually used for reliable 
+transmission. In order to better evaluate the effect of the 
+algorithm in the simulation, we adopted a hybrid topology with 
+15nodes randomly connected as shown in the Fig.4(a). The 
+bandwidth of each link in the topology is 1000Mb/s. We set the 
+link occupancy coefficient 𝛼 to 0.7. 
+ 
+ 
+ 
+             (a) In simulation           (b) In real system       
+Fig. 4. Topology. 
+  
+Fig. 5. Scheduled traffic 
+All flows are randomly generated, and the source and 
+destination of each flow are randomly selected from all end 
+devices. The period of the flow is randomly selected as {1000μs, 
+2000μs}. The time slot duration 𝑠𝑙𝑜𝑡𝑑𝑢𝑟𝑎𝑡𝑖𝑜𝑛 is set to 500μs, 
+and the size of each packet is generated with 1KB. 
+In the reinforcement learning environment configuration, 
+we set a learning rate of 0.01 and an ε-greedy coefficient of 0.9 
+to train the network parameters. The largest episode is set to 
+1000 times. 
+The simulation results are shown in the Fig.5. We 
+respectively generated 6000~11000 data packets and counted 
+the percentage of the number of successfully scheduled flows. 
+For comparison, we choose RIP protocol as the reference. The 
+gate control for transmitting flows is set based on RIP. We can 
+see that when the total demand is small (for example, less than 
+7000), both RIP-based and JRSA nearly give the optimal 
+solution to schedule all flows. As the number of flows increases, 
+both solutions have a sharp decrease because the available 
+resources 
+provide 
+inflexible 
+scheduling 
+scheme 
+that 
+accommodates more traffic by splitting the flow demands over 
+multiple paths. However, JSRA allows to provide an result 
+improvement in gap with even 40% (20% in 8000 flows and 40% 
+in 9000 flows). Though the large traffic increases the difficulty 
+of planning and reduces the number of successfully scheduled 
+flows, JSRA still manages to choose exploratory actions to 
+transmit in more paths during scheduling. Meanwhile, 
+bandwidth resource allocation is more balanced. 
+B. Real System Implementation 
+In the system implementation, due to the limited number of 
+switches and hosts, we choose a simple ring topology for actual 
+implementation as shown in Fig.4(b). We use packet-sending 
+software to send packets. Once the period, priority, start time 
+and number of packets are chosen, packets are generated. In 
+order to better observe the statistical results, we generate two  
+490
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:22:22 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+(a) 
+                           (b) 
+Fig.6. Latency distribution without CQF. (a)flow1 with 𝑝𝑒𝑟𝑖𝑜𝑑= 1000𝜇𝑠; 
+(b) flow2 with 𝑝𝑒𝑟𝑖𝑜𝑑= 2000𝜇𝑠; 
+ 
+(a)                            (b) 
+Fig.7. Latency distribution with CQF by JSRA. (a)flow1 with 𝑝𝑒𝑟𝑖𝑜𝑑=
+1000𝜇𝑠; 
+(b) flow2 with 𝑝𝑒𝑟𝑖𝑜𝑑= 2000𝜇𝑠; 
+flows of 8000 packets from host 1 to host 2, whose periods are 
+1000μs and 2000μs.  
+In the experiment, we put the trained algorithm into the 
+CNC in Figure 1. The Network Interface Card (NIC) of each 
+device is INTEL I210. The routing information is issued from 
+RYU by the OpenFlow protocol. The scheduling information is 
+configured and implemented by the Traffic Control tool and 
+TAPRIO gate control. 
+The real system implementation results are shown in the 
+Fig.6 and Fig.7. First, according to the topology in Fig.4(b), 
+when messages are sent from host 1 to host 2, the measurement 
+of time is between the sending moment of the NIC in host 1 and 
+the receiving moment of the NIC in host 2. the end-to-end 
+latency is 2 hops plus link latency, as 500μs*2, which exactly 
+equal to the max latency 1000μs in the Fig.7. Second, the 
+latency determination is guaranteed with JSRA. As shown in 
+the Fig.6, when the CQF scheduling is not performed, the end-
+to-end latency of flow1 and flow2 obey a normal distribution in 
+the range of 1000~1500μs.As shown in the Fig.7, the end-to-
+end latency of the data packet can have a good truncation effect 
+at the position of 1000 μs with JSRA. Almost all flows can be 
+transmitted before this time. In addition. The range length of 
+latency is 500 μs without CQF, which is reduced to 200 μs after 
+CQF scheduling by JSRA. Therefore, jitter has also a significant 
+improvement.    
+V. CONCLUSION 
+In this paper, we introduced a CQF system architecture to 
+realize the deterministic transmission of flows in the industrial 
+Internet. It has centralized control layer for algorithm 
+calculation and device layer for transmission. Then we 
+proposed a routing planning decision algorithm called JRSA for 
+CQF. Experimental results show that the JSRA improves the 
+traffic 
+accommodated 
+by 
+the 
+topology. 
+After 
+the 
+implementation of CQF system architecture, the flow can be 
+accurately scheduled to achieve the expected deterministic end-
+to-end latency in the real environment. In the future, the 
+optimization of CQF algorithm would be an interesting 
+direction. 
+ACKNOWLEDGMENT 
+This work is supported by the National Key Research and 
+Development 
+Program 
+of 
+China 
+under 
+Grants 
+2018YFB1702000. 
+REFERENCES 
+[1] 
+Norman Finn Huawei Technologies Co. Ltd. Time-sensitive and 
+Deterministic Networking Whitepaper July 11, 2017. 
+[2] 
+Dr. René Hummen, Stephan Kehrer, Dr. Oliver Kleineberg, TSN – Time 
+Sensitive Networking White Paper,2017. 
+[3] 
+IEEE 
+802.1Qch 
+Standard: 
+Cyclic 
+Queuing 
+and 
+Forwarding   
+https://1.ieee802.org/tsn/802-1qch/. 
+[4] 
+Industrial Internet Consortium. Time Sensitive Networks for Flexible 
+Manufacturing Testbed Characterization and Mapping of Converged 
+Traffic Types[J]. 2019. 
+[5] 
+W. Zhang, D. Yang, P. Haixia, et al. Deep Reinforcement Learning 
+Based Resource Management for DNN Inference in Industrial IoT. IEEE 
+Transactions on Vehicular Technology, vol. 70, no. 8, pp. 7605-7618, 
+Aug. 2021. 
+[6] 
+Hongzi Mao, Mohammad Alizadeh, Ishai Menache, Srikanth Kandula 
+Resource Management with Deep Reinforcement Learning, in HotNets 
+'16: Proceedings of the 15th ACM Workshop on Hot Topics in Networks, 
+pp.50-56, November 2016.  
+[7] 
+J. Prados-Garzon, T. Taleb and M. Bagaa, "LEARNET: Reinforcement 
+Learning Based Flow Scheduling for Asynchronous Deterministic 
+Networks," ICC 2020 - 2020 IEEE International Conference on 
+Communications (ICC), Dublin, Ireland, pp. 1-6, 2020. 
+[8] 
+J. Specht and S. Samii, “Synthesis of queue and priority assignment for 
+asynchronous traffic shaping in switched ethernet,” in 2017 IEEE 
+RealTime Systems Symposium (RTSS), pp. 178–187, Dec 2017. 
+[9] 
+J. Specht and S. Samii, “Urgency-based scheduler for time-sensitive 
+switched ethernet networks,” in 2016 28th Euromicro Conference on 
+RealTime Systems (ECRTS), pp. 75–85, July 2016.  
+[10] Zifan Zhou, Michael Stübert Berger, Sarah Renée Ruepp, Ying Yan, 
+"Insight into the IEEE802.1 Qcr Asynchronous Traffic Shaping in Time 
+Sensitive Network",in Advances in Science, Technology and 
+Engineering Systems Journal Vol. 4, No. 1, pp.292-301 ,2019. 
+[11] V. Gavriluţ and P. Pop, "Scheduling in time sensitive networks (TSN) for 
+mixed-criticality industrial applications," 2018 14th IEEE International 
+Workshop on Factory Communication Systems (WFCS), Imperia, pp. 1-
+4,2018. 
+[12] V. Gavriluţ, L. Zhao, M. L. Raagaard and P. Pop, "AVB-Aware Routing 
+and Scheduling of Time-Triggered Traffic for TSN," in IEEE Access, vol. 
+6, pp. 75229-75243, 2018. 
+[13] W. Zhang, D. Yang, W. Wu, et al. Optimizing Federated Learning in 
+Distributed Industrial IoT: A Multi-Agent Approach. IEEE Journal on 
+Selected Areas in Communications, vol. 39, no. 12, pp. 3688-3703, Dec. 
+2021. 
+[14] Jonatan Krolikowski, Sébastien Martin, Paolo Medagliani, Jérémie, et al. 
+Paris Research Center, Joint Routing and Scheduling for Large-Scale 
+Deterministic IP Networks, April 2020. 
+[15] J. Yan, W. Quan, X. Jiang and Z. Sun, "Injection Time Planning: Making 
+CQF Practical in Time-Sensitive Networking," IEEE INFOCOM 2020 - 
+IEEE Conference on Computer Communications, Toronto, ON, Canada, 
+pp. 616-62, 2020. 
+ 
+ 
+491
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:22:22 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,1174 @@
+DeepCQF: Making CQF Scheduling More
+Intelligent and Practicable
+Zongrong Cheng, Dong Yang*, Weiting Zhang, Jie Ren, Hongchao Wang, and Hongke Zhang
+School of Electronic and Information Engineering, Beijing Jiaotong University, China
+Abstract—Recently, Cyclic Queuing and Forwarding (CQF)
+based shaper has been proposed by IEEE 802.1Qch to satisfy the
+demands for deterministic industrial services. However, CQF only
+deﬁnes the queuing model and ﬂow features, the investigations of
+scheduling for Time-Triggered ﬂows are still at the early stage.
+How to make the scheduling more efﬁcient and intelligent is still
+an open issue to be solved. In this paper, we propose a Deep
+Reinforcement Learning (DRL) assisted two-stage scheduling
+algorithm, namely DeepCQF, to solve the temporal scheduling
+problem based on CQF model, which can be adopted in the off-
+line and on-line scenarios. Due to the high schedulability and
+low time cost requirements in the off-line and on-line scenarios,
+respectively, DeepCQF uses the DRL algorithm to take immediate
+response for the coming ﬂows when scheduling online, while in
+the off-line scenario, DeepCQF combines the DRL and heuristic
+algorithms together as a two-stage mechanism to further improve
+the schedulability. We compare the DeepCQF with other state-
+of-the-art algorithms for CQF. Experiment results show that
+DeepCQF can increase the number of accommodating ﬂows by
+an average of 2 times than Greedy algorithm and the convergence
+speed by 3 times at most than Double Deep Q-network algorithm.
+Index Terms—Time-Sensitive Networking; CQF Model; Deep
+Reinforcement Learning; Temporal Scheduling.
+I. INTRODUCTION
+In recent years, the demands for deterministic network
+services have been penetrated into a large number of domains,
+such as industrial automation, automotive control systems,
+avionic applications, and mobile backhaul, among others [1],
+[2]. However, the traditional methods in packet switched
+networks are not suitable for the services of such hard real-
+time requirements [3]. In order to cope with the problem,
+the IEEE 802.1 TSN working group has developed a set
+of promising standards of Time-Sensitive Networking (TSN),
+which targets at the deterministic forwarding applications and
+bridging at the link layer of the network, providing these
+services with deterministic latency, jitter, and high reliability.
+TSN provides the per-queue granularity trafﬁc shaping
+solutions to deal with the synchronized ﬂow forwarding prob-
+lems that include Time Aware Shaper (TAS, a.k.a. IEEE
+802.1Qbv) and Cyclic Queuing and Forwarding (CQF, a.k.a.
+IEEE 802.1Qch) with minor extensions to standard switches.
+TAS is required to dynamically plan the conﬁgurations of
+Gate Control List (GCL) to schedule Time-Triggered (TT)
+ﬂows before the task starts. However, with the ﬂow features
+changing, the recalculation of GCL conﬁgurations can be com-
+putational complex. Alternatively, CQF is proposed as an easy-
+This work was supported in part by the National Key Research and Develop-
+ment Program of China under Grants 2018YFB1702000, and the Fundamental
+Research Funds for the Central University under Grant 2021YJS006.
+The corresponding author is Dong Yang*. E-mail: dyang@bjtu.edu.cn.
+to-use model by installing the static conﬁgurations on GCL.
+By cyclically switching a pair of Ping-Pong queues, CQF guar-
+antees the hop-by-hop deterministic bounded latency. Thus, the
+latency introduced by ﬂow transmission completely depends
+on the time interval size (i.e., cycle time [4]) and the number
+of hops, and is unaffected by any changes of topology or
+interference from other non-deterministic ﬂows [5].
+As IEEE 802.1Qch only provides the queuing model and
+ﬂow features, the problem intended for the scheduling of TT
+ﬂows is still an open issue to be solved and optimized. Our
+original intention of this paper is to explore how to make the
+temporal scheduling more intelligent and practicable.
+Many algorithms have introduced valuable experience for
+scheduling TT ﬂows in TSN networks. Steiner et al. [6]
+focused on the synthesized schedules based on TAS by using
+the solver of Satisﬁability Modulo Theories (SMT). However,
+with the increase of the number of ﬂows and nodes in the
+network, the time cost of SMT will be unacceptable. Yan et
+al. [7] proposed the Tabu-ITP algorithm based on CQF model
+and got a good trade-off between the mapping quality and
+computational overhead by regulating the injection time for
+each ﬂow. Quan et al. [5] further proposed a light-weight
+dynamic algorithm using CQF model to schedule TT ﬂows
+online, and it greatly improved the number of scheduled ﬂows.
+Nevertheless, traditional algorithms cannot learn intelligently
+and actively based on experience, thus it cannot get better over
+time. Prados-Garzon et al. [1] presented a Deep Reinforcement
+Learning (DRL) solution, LEARNET, to learn scheduling poli-
+cies based on asynchronous networks, and it achieved higher
+gains of revenue in 5G backhaul environments. Although
+DRL has good generalizations for dynamic environments,
+it is difﬁcult to be as good as the optimization of exact
+solutions intended for the particular scenario. Therefore, we
+explore whether we can combine the learning and traditional
+algorithms to satisfy the different requirements for scheduling
+TT ﬂows ofﬂine and online, and improve the schedulability,
+resource utilization, and reduce time cost by using CQF model.
+In this paper, we propose a DRL assisted two-stage schedul-
+ing algorithm, namely DeepCQF, to schedule the TT ﬂows in
+CQF based TSN networks, which can be adopted in the off-
+line and on-line scenarios. Speciﬁcally, in the on-line schedul-
+ing scenario, making quick decisions for the new coming ﬂows
+is required, thus we design a LearnSched (i.e., Learning based
+scheduling) algorithm as the ﬁrst stage of DeepCQF to take
+the immediate response for each coming ﬂow. In the off-
+line scenario, we focus on scheduling more TT ﬂows, and
+a TSSched (i.e., Tabu Search based scheduling) algorithm is
+ICC 2022 - IEEE International Conference on Communications | 978-1-5386-8347-7/22/$31.00 ©2022 IEEE | DOI: 10.1109/ICC45855.2022.9882280
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:17:51 UTC from IEEE Xplore.  Restrictions apply. 
+Q6
+Q7
+T0
+T1
+O
+C
+C
+O
+TX Gate Control List
+Q6
+Q7
+T0
+T1
+C
+O
+O
+C
+RX Gate Control List
+Q6
+Q7
+C = Close
+O = Open
+C = Close
+O = Open
+Fig. 1. Cyclic Queuing and Forwarding Model.
+further designed as the second stage of DeepCQF to improve
+the scheduling performance based on the high-quality initial
+results computed by the LearnSched algorithm.
+To evaluate the performance of our proposed algorithm, we
+compare the DeepCQF with other state-of-the-art algorithms
+under various system settings. The experiment results show
+that DeepCQF can schedule nearly twice the ﬂows than
+Greedy algorithm, and increase the number of schedulable
+ﬂows by 50%, 40%, and 10% on average compared with SMT,
+Double Deep Q-Network (DDQN), and Tabu-ITP (Injection
+Time Planning) algorithms, respectively. And it has the higher
+temporal resource utilization as well as lower time cost in
+the off-line and on-line scenarios, respectively. To make the
+scheduling practicable, we deploy the DeepCQF into our TSN
+testbed to schedule different TT ﬂows in real environments.
+In conclusion, the contributions of this paper are:
+• We develop a temporal-scheduling model for the schedul-
+ing problem of TT ﬂows based on the CQF queuing mech-
+anism and our investigations of the relationship between the
+schedulability and temporal resource allocation policy.
+• We propose DeepCQF, a DRL assisted algorithm ﬁrstly
+used to solve the CQF based scheduling problem of TT ﬂows
+in TSN networks under the off-line and on-line scenarios.
+• We evaluate the performance of the proposed algorithm
+in simulated environments, and validate the practicability of
+scheduling by deploying the DeepCQF into our TSN testbed
+to schedule different TT ﬂows in real environments.
+The rest of this paper is organized as follows. In Section
+II, the scheduling problem is formulated by using the CQF
+model. Section III proposes the DeepCQF algorithm to solve
+the formulated problem in the off-line and on-line schedul-
+ing scenarios. The performance evaluation, followed by the
+conclusion are presented in Section IV and V, respectively.
+II. SYSTEM MODEL AND PROBLEM FORMULATION
+A. Scheduling Problem based on CQF System Model
+The CQF model, which acts as a queuing mechanism for
+shaping TT ﬂows, providing each ﬂow with predictable and
+extremely bounded latency by cyclically switching the sending
+and receiving status of Ping-Pong queues on each device port.
+The gate operations are executed repeatedly controlled by GCL
+that takes the hyper period as an operation cycle [8], [9]. As
+shown in Fig. 1, assuming that the hyper period is divided by
+two time intervals T0 and T1. In the even time interval T0, Q6
+opens the TX gate to send ﬂows to the downstream devices,
+and Q7 opens the RX gate to receive ﬂows from the upstream
+devices. In the odd time interval T1, the operations execute
+conversely. Furthermore, once the packets are transmitted from
+H1
+H2
+S1
+H3
+5RXWH^+ԗ6ԗ+`
+5RXWH^+ԗ6ԗ+`
+(a)
+ID
+period
+src dst
+latency
+jitter
+size
+pkt
+T
+1.1
+1.2
+2.1
+1600us
+1600us
+3200us
+H1
+H1
+H2
+H3
+H3
+H3
+1600us
+2000us
+2000us
+280us
+300us
+300us
+1KB
+1
+1
+1
+800us
+800us
+800us
+1KB
+1KB
+(b)
+Fig. 2. A simple example of topology and TT ﬂows. (a) An easy-to-understand
+topology; and (b) Features of the three TT ﬂows with ID 1.1, 1.2, and 2.1,
+respectively.
+the current device during a time interval Ti, they are required
+to be received by the next hop within the same duration Ti,
+where i = {0, 1}. Therefore, the end-to-end latency of each
+ﬂow is limited by the lower bound (N −1) × T and upper
+bound (N + 1)×T with the variation (i.e., jitter) no more than
+2 × T, where N and T denote the number of hops through
+the path and the time interval size, respectively [4].
+The
+proposed
+optimization
+problem
+is
+motivated
+by
+scheduling on a simple topology based on the CQF model
+as shown in Fig. 2 and Fig. 3, where each packet should be
+allocated to a time interval from the source station to inject for
+transmission. If all the packets are sent during time interval
+T0 from the hosts, shown in Fig. 3(a), they will be aggregated
+to the same buffer (i.e., the queuing space used to store packet
+data) of switch S1. Then in the next time interval, the packet
+of ﬂow with ID 2.1 which exceeds the maximum capacity of
+T1 will be dropped or delayed to transmit to host H3 that
+leads to the unpredictable delay. However, if we delay the TX
+time of this packet to time interval T1 from the source station
+in Fig. 3(b), all the packets will be scheduled successfully in
+the next time interval with bounded end-to-end latency, and
+the time interval utilization can be improved. Therefore, the
+schedulability depends on the quality of the temporal resource
+(i.e., time interval) allocation policy for each ﬂow.
+B. Problem Formulation
+We use the directed graph G = {V, E} to model the
+network physical topology, where V
+= (H ∪S) is a set
+of nodes, including the end stations H and switches S, and
+E = {(i, j)|i, j ∈V and i, j are connected by a link} refers
+to a set of tuples of directed edges linking any two nodes.
+The size of the time interval is T, and the set of TT ﬂows is
+denoted as F. Then each TT ﬂow can be described in Eq. (1).
+fi = {id, period, src, dst, path, le2e, je2e, pktnum, size, tx},
+∀fi ∈F, i = 1, 2, . . . , |F|,
+(1)
+where each ﬂow fi has the features that include ID number,
+ﬂow period, source address, destination address, pre-deﬁned
+transmission path, end-to-end latency requirement, jitter re-
+quirement, packet number, packet size as the constants we
+have already known, and TX time as the variable waiting to
+be solved. The TX time of a ﬂow refers to the timestamp
+when the ﬂow sends from the Network Interface Card (NIC)
+of the device. |F| represents the total number of TT ﬂows. We
+abstract the objective function and core constraints as follows:
+Objective function: The optimization goal of the problem
+is to maximize the number of schedulable ﬂows (i.e., schedu-
+lability) by properly allocating the temporal resources.
+Maximize
+|Fsuc|,
+Fsuc ⊆F,
+(2)
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:17:51 UTC from IEEE Xplore.  Restrictions apply. 
+H1
+S1
+H2
+S1
+S1
+H3
+1.1
+Time 
+,nterval
+1.2
+1.1
+1.2
+2.1
+1.1
+1.2
+2.1
+Delay or drop
+1.1
+1.2
+(a) Inappropriate time interval allocation approach.
+Interval T0
+XV
+Interval T1
+XV
+Interval T2
+XV
+Interval T3
+XV
+Hyper 3eriodXV
+H2
+S1
+S1
+H3
+1.1
+1.2
+1.1
+1.2
+2.1
+1.1
+1.2
+1.1
+1.2
+2.1
+Delay
+2.1
+6uccess
+H1
+S1
+(b) Appropriate time interval allocation approach.
+Fig. 3. Description of the time interval allocation problem.
+where |Fsuc| is the number of successfully scheduled ﬂows.
+Constraints: We illustrate the important constraints for the
+network conﬁgurations as follows. And upper designers can
+add other restrictions based on their speciﬁc requirements.
+• TX time constraint: This constraint requires that the TX
+time of each TT ﬂow should be smaller than its ﬂow period to
+avoid the packets in different periods preempting the limited
+resource of NIC at the same time, described by Eq. (3).
+0 ≤fi.tx < fi.period,
+i = 1, 2, . . . , |F|.
+(3)
+• Hyper period constraint: The hyper period denoted as
+HP is a constant value that should be equal to the least
+common multiple of the set of ﬂow periods, because the GCL
+requires periodically executing the operations for all ﬂows.
+HP = LCM(F.periods).
+(4)
+• Time interval size constraint: The lower and upper
+bounds of the time interval size T are given in this constraint.
+For the minimum value of T, the largest packet among TT
+ﬂows should be accommodated, while for the maximum value
+of T, it is required not to be greater than the greatest common
+divisor of the set of ﬂow periods. Besides, either for the hyper
+period or ﬂow period, it should be divisible by T.
+⎧
+⎪
+⎪
+⎪
+⎪
+⎪
+⎨
+⎪
+⎪
+⎪
+⎪
+⎪
+⎩
+T ≥max(F.sizes)
+B
++ dprop + dproc + dqueue + dsync,
+T ≤GCD(F.periods),
+fi.period % T = 0,
+i = 1, 2, . . . , |F|,
+HP % T = 0,
+(5)
+where B denotes the link bandwidth, and dprop, dproc, dqueue,
+dsync represent the packet delays for propagating, processing,
+queuing, and synchronizing in the worst cases between any
+two connected devices, respectively.
+• Packet transmission constraint: The size of total packets
+transmitted within each time interval should be no more than
+the maximum time interval capacity, because all the packets
+stored in the sending buffer are required to be transmitted
+before the next time interval starts.
+⎧
+⎪
+⎪
+⎪
+⎪
+⎨
+⎪
+⎪
+⎪
+⎪
+⎩
+0 ≤
+|F |
+
+m=1
+fm.pktnum
+
+s=1
+fm.size × Φi(pkts
+m) ≤Ci
+max,
+λ = HP/T,
+i = 1, 2, . . . , λ,
+(6)
+where pkts
+m denotes the sth packet of ﬂow fm. And Φi(·) is
+an indicator function. If the packet pkts
+m is allocated into time
+interval Ti, then Φi(pkts
+m) will be 1, otherwise, it will be 0.
+λ is the frequency of appearance of time intervals in a hyper
+period. Ci
+max is the maximum capacity of time interval Ti.
+• Flow requirements constraint: We need to ensure that
+the requirements of end-to-end latency, jitter, and near-zero
+packet loss for each ﬂow should be satisﬁed in the worst case.
+⎧
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎨
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎪
+⎩
+(Ni + 1) × T ≤fi.le2e,
+pktj
+i.le2e −
+1
+fi.pktnum
+fi.pktnum
+
+m=1
+pktm
+i .le2e
+ ≤fi.je2e,
+
+fi.pktnum
+
+m=1
+λ
+t=1
+Φt(pktm
+i ) −fi.pktnum
+ < 1 × 10−6,
+i = 1, 2, . . . , |F|,
+(7)
+where Ni represents the number of hops that ﬂow fi traverses
+through. Moreover, each packet can be allocated with no more
+than one time interval, described by Eq. (8).
+⎧
+⎪
+⎪
+⎨
+⎪
+⎪
+⎩
+λ
+t=1
+Φt(pktj
+i) ≤1, Φk(pktj
+i) ≥0, Φk(pktj
+i) ∈Z,
+i = 1, 2, . . . , |F|, j = 1, 2, . . . , fi.pktnum,
+k = 1, 2, . . . , λ.
+(8)
+To tackle such an NP-hard temporal scheduling problem
+[7] in the off-line and on-line scenarios, respectively, we
+design a DRL assisted two-stage scheduling algorithm, namely
+DeepCQF, that is introduced in the next section.
+III. DEEPCQF: DRL ASSISTED TWO-STAGE
+SCHEDULING ALGORITHM
+Compared with the non-learning algorithms, DRL can ac-
+tively learn from the dynamic environment and has lower
+time cost when testing. Hence, DRL is more preferable to
+be applied into the on-line scenario. However, in the off-line
+scenario, the results learned from DRL are not easy to be
+better than traditional algorithms because the training process
+for DRL is too generalized. In order to improve the quality of
+results, the heuristic algorithm is added as the second stage of
+DeepCQF to schedule the static ﬂows.
+LearnSched design: As the ﬁrst stage of DeepCQF, Learn-
+Sched uses the DDQN framework for DRL to schedule the
+incrementally added TT ﬂows with random source and des-
+tination addresses online. Then we transform the formulated
+scheduling problem into a Markov Decision Process (MDP),
+and the core elements of LearnSched are designed as follows:
+State space: The state space denoted as S covers the buffer
+utilization and ﬂow features at each step. Speciﬁcally, for the
+step t, the agent obtains the state st = socc
+t
+∪sflow
+t
+, st ∈S,
+where socc
+t
+comprises the usage of each receiving buffer of
+switches during each time interval within a hyper period, and
+sflow
+t
+includes the features of ﬂow ft coming at step t.
+sflow
+t
+= {ft.id, ft.period, ft.src, ft.dst, ft.path,
+ft.le2e, ft.je2e, ft.pktnum, ft.size},
+(9)
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:17:51 UTC from IEEE Xplore.  Restrictions apply. 
+socc
+t
+= {ξ
+Qp1
+n1
+T1 (t), ξ
+Qp2
+n1
+T1 (t), . . . , ξ
+Qp1
+n2
+T1 (t), . . . , ξ
+Q
+pJ
+nK
+T1
+(t),
+ξ
+Qp1
+n1
+T2 (t), ξ
+Qp2
+n1
+T2 (t), . . . , ξ
+Qp1
+n2
+T2 (t), . . . , ξ
+Q
+pJ
+nK
+T2
+(t),
+...
+ξ
+Qp1
+n1
+TN (t), ξ
+Qp2
+n1
+TN (t), . . . , ξ
+Qp1
+n2
+TN (t), . . . , ξ
+Q
+pJ
+nK
+TN
+(t)},
+where ξ
+Q
+pj
+nk
+Ti
+(t) represents the usage of buffer on the jth
+interface of the kth switch during time interval Ti.
+Action space: The action space A is a set of time intervals
+waiting to be allocated for each ﬂow. At each step t, the agent
+takes action at for ft based on the policy π: S →A to make
+the Q-value Q(st, aft) optimal with probability of ϵ.
+at =
+⎧
+⎪
+⎨
+⎪
+⎩
+arg max
+aft∈A
+Q(st, aft),
+ϵ ≥0.5 −β × t,
+aft,
+ϵ < 0.5 −β × t,
+ϵ, β ∈[0, 1],
+(10)
+where aft means the time interval allocated to ﬂow ft to inject,
+and it has the coarse-grained constraint extended from Eq. (3).
+0 ≤aft ≤ft.period
+T
+−1, aft ∈Z.
+(11)
+The Q-value Q(st, aft) is calculated by the action-value
+function Qπ(s, a) that reﬂects the long-term revenue for
+mapping from st to aft, described by Eq. (12).
+Qπ(s, a) = E
+
+rt+1 + γQπ(st+1, aft+1)
+st = s, aft = a, π
+	
+,
+(12)
+where rt+1 is the immediate reward obtained after the action
+at has been taken under state st.
+Reward: Once the action at has been taken, the immediate
+reward rt+1 can be obtained from the environment as a
+feedback to evaluate how well the action performed, shown
+in Eq. (13). Then the agent tends to learn the better policies
+to maximize its cumulative rewards.
+rt+1 =
+
+1,
+if ft is successfully scheduled,
+−1,
+otherwise.
+(13)
+The state transition and training process are shown in
+Algorithm 1. From line 1 to 9, the time interval at is chosen by
+the agent and allocated to the ﬂow ft based on the observation
+of st at each step t, then the state transits to st+1 where the
+usage of buffers and the ﬂow features are changed, denoted as
+ξ
+Q
+pj
+nk
+Ti
+(t+1) and ft+1, respectively. And the immediate reward
+rt+1 can be obtained. The trajectory {st, at, rt+1, st+1, done}
+is stored into the replay buffer. From the start of line 10, the
+agent begins to train itself by sampling a batch of histories
+from the replay buffer and update the parameters at each
+step [10]. The LearnSched has two neural networks, which
+are evaluation network and target network with the same
+structure. The evaluation network is trained by minimizing the
+loss function L, where L =
+1
+Db
+Db
+j=1 (yj −Q (sj, aj; ω))2, to
+update its parameter ω.
+yj =
+⎧
+⎨
+⎩
+rj,
+if done,
+rj + γQ′(s′
+j, arg max
+a′
+j∈A
+Q
+
+s′
+j, a′
+j; ω
+
+; ω−), otherwise,
+(14)
+where Db denotes the number of histories randomly sampled
+from the replay buffer. And yj represents the target value
+described by Eq. (14). Then the parameter of target network
+ω−is replaced by ω of evaluation network every L−steps.
+Algorithm 1: LearnSched for Dynamic Scheduling.
+Input: Empty replay buffer D, Initial network
+parameters ω and ω−, Target network
+replacement frequency L−, Replay buffer size
+Nr, Training batch size Db, Action space A.
+Output: Optimal policy π∗.
+1 for episode e ∈{1, 2, . . . , M} do
+2
+Initialize state s;
+3
+for step t ∈{0, 1, . . . , K} do
+4
+Select an action at from Q(st, aft; ω) based on
+ϵ −greedy policy;
+5
+Inject the ﬂow ft into allocated time interval;
+6
+Receive an immediate reward rt+1;
+7
+Transit to the next state st+1;
+8
+Store tuple (st, at, rt+1, st+1, done) into D;
+9
+Replace the oldest tuple if |D| > Nr;
+10
+Sample a minibatch of Db tuples
+(s, a, r, s′, done) from D;
+11
+Deﬁne amax(s′; ω) = arg max
+a′∈A
+Q(s′, a′; ω);
+12
+Determine yj =
+
+r,
+if done,
+r + γQ′(s′, amax(s′; ω); ω−),
+otherwise;
+13
+Perform a gradient decent step with loss
+L = E[(yj −Q(s, a; ω))2];
+14
+Reset ω−= ω every L−steps;
+15
+if done then
+16
+break;
+17
+end
+18
+end
+19 end
+TSSched design: In order to further improve the perfor-
+mance of scheduling TT ﬂows ofﬂine, we design the TSSched
+algorithm to search optimal solutions in speciﬁc static envi-
+ronments, as the second stage of DeepCQF. The pseudo code
+of TSSched is shown in Algorithm 2.
+The high-quality initial results are obtained by LearnSched.
+The TT ﬂows are divided into two sets, which are the
+successfully scheduled set Fsuc and the set Ffail that is failed
+to be scheduled, respectively. The core design of the searching
+process is shown from line 7 to 13. In the probability of δ, the
+random searching strategy is used to explore better solutions.
+Speciﬁcally, in the shifting mode, the randomly selected ﬂows
+that belong to Fsuc can be exchanged with each other to
+change the distribution of time interval usage, while in the
+exchanging mode, one or more ﬂows are randomly selected
+from Fsuc, and moved to Ffail. Another searching strategy
+refers to the domain expert, which is more inclined to select
+the ﬂows with larger size, lower deadline, longer path length
+and period to exchange. By iteratively searching the neighbor
+candidates, the near-optimal results can be computed.
+IV. PERFORMANCE EVALUATION
+In this section, we ﬁrst evaluate the performance of Deep-
+CQF in the off-line and on-line scenarios on the Python imple-
+mentations, then we validate the practicability of scheduling
+by deploying the DeepCQF into our TSN testbed.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:17:51 UTC from IEEE Xplore.  Restrictions apply. 
+Algorithm 2: TSSched for Static Scheduling.
+Input: Flow set F, Buffer resource set BUF.
+Output: Mapping from fi ∈Fsuc to time interval Ti.
+1 curres ←LearnSched init result(F, BUF);
+2 bestres, cursor ←curres, 0;
+3 while (not stoppingCondition()) do
+4
+curiter ←0;
+5
+while curiter < maxiter do
+6
+candidateLst.push(curres);
+7
+if random() ≤δ then
+8
+rand(shifting(curres, BUF));
+9
+rand(exchanging(curres, Ffail, BUF));
+10
+else
+11
+exp(shifting(curres, BUF));
+12
+exp(exchanging(curres, Ffail, BUF));
+13
+end
+14
+curiter + +;
+15
+end
+16
+bestres ←update best res(candidateLst);
+17
+curres ←update cur res(candidateLst);
+18
+cursor + +;
+19 end
+20 return bestres;
+A. Performance Evaluation in Simulated Environments
+The parameter settings are listed as follows:
+• Settings for DeepCQF: For LearnSched, we set two
+fully connected hidden layers, each with 1000 neurons. The
+sizes of replay buffer and sample batch are set to 1e4 and
+64, respectively. We use Adam with 0.0001 learning rate and
+discounting factor of 0.9 to train the evaluation network param-
+eters. For TSSched, the maximum iterations and repetitions are
+set to 3000 and 200, respectively, which means there are 200
+candidate solutions will be generated in each iteration. The
+tabu length is set to 500.
+• Settings for TSN network: We set the benchmark
+topology with 10 hosts and 2 switches shown in Fig. 4(b). The
+link bandwidth is 1000Mb/s, and the queue length is 1024 to
+leave enough buffer space. The size of each packet is in the
+range of 50B∼1KB as recommended by Industrial Internet
+Consortium [11]. And 700 TT ﬂows are scheduled under
+various settings of the time interval size and ﬂow periods.
+The experiment results are listed as follows:
+• Convergence speed comparison: Here we set the time
+interval size to 400us. The ﬂows with the set of periods
+{1600us, 3200us} are scheduled ofﬂine. The iterative search-
+ing process is shown in Fig. 5(a). Compared with the Tabu-ITP
+with exchanging mode [7] and DDQN, DeepCQF increases
+the convergence speed by nearly three times. This is because
+DeepCQF is initialized with the results of LearnSched that
+has a better observation of the global network status compared
+with greedy and random policies adopted in the initialization
+of Tabu-ITP and DDQN, respectively. Therefore, DeepCQF
+can be more easy and quick to obtain the optimal solutions.
+• Schedulability comparison: We compare the DeepCQF
+with the other four state-of-the-art algorithms adopted in
+TSN scheduling problems ofﬂine. In Fig. 5(b), DeepCQF
+Aggregate Switches
+Aggregate Switches
+Entities of TSN
+Switches & Hosts
+Entities of TSN
+Switches & Hosts
+Entity of TSN
+Controller
+Entity of TSN
+Controller
+(a)
+H1
+H3
+H5
+S1
+S2
+H2
+H4
+H6
+H7
+H9
+H8
+H10
+H1
+H3
+H5
+S1
+S2
+H2
+H4
+H6
+H7
+H9
+H8
+H10
+H1
+H3
+H5
+S1
+S2
+H2
+H4
+H6
+H7
+H9
+H8
+H10
+CUC
+CNC
+噯
+噯噯
+噯
+SchedTSN
+Components
+Time interval 
+allocation
+Control Plane
+Data Plane
+State
+Database
+Gathering
+Computing
+Registration
+1 Registration
+1
+2
+3
+Deployment
+4 Deployment
+4
+(b)
+Fig. 4. Architecture of our TSN testbed. (a) Entities of devices; and (b) Depict
+of the fully centralized architecture.
+can schedule more than 600 ﬂows with temporal resource
+utilization of more than 90% shown in Fig. 5(c). It schedules
+nearly twice the ﬂows than Greedy, and increases the number
+of schedulable ﬂows by 50%, 40%, and 10% on average
+counted in 50 rounds of tests compared with SMT [6], DDQN,
+and Tabu-ITP algorithms, respectively. Moreover, Fig. 5(b)
+and Fig. 5(c) show that it has a positive correlation between
+the schedulability and temporal resource utilization, because
+the more time intervals are utilized, the more space can be
+allocated to each ﬂow for transmission.
+• Impact of time interval size: As shown in Fig. 5(b), with
+the increase of time interval size, more schedulable ﬂows can
+be accommodated. One reason is that the capacity of each time
+interval becomes larger to accommodate more ﬂows, the other
+reason is that the number of time intervals is reduced within a
+hyper period that becomes easier to search optimal solutions.
+• Impact of ﬂow periods: The performances under three
+different sets of ﬂow periods are shown in Fig. 5(d). For the
+set of periods {400us, 1600us, 3200us}, the schedulability
+performs not as good as the other two scenarios, because the
+ﬂows with the shorter periods need to occupy more temporal
+resources. In the other two scenarios, they perform similarly,
+as they suffer more impact from the short period ﬂows.
+• Time cost comparison: In the on-line scheduling sce-
+nario, three groups of ﬂows s1, s2, and s3 with the ﬂow
+period sets {400us, 1600us, 3200us}, {1600us, 3200us}, and
+{1600us, 3200us, 4800us} are used for comparing the com-
+putational time cost under various algorithms. As shown in
+Fig. 6(a), group s1 and s2 have nearly the same time cost by
+scheduling the ﬂows, but for group s3, the time cost is larger.
+This is because when scheduling the ﬂows of group s1 and
+s2, the hyper periods are both 3200us, and they have the same
+number of time intervals to search, while for group s3, the
+hyper period is 4800us accommodating more time intervals
+whose searching complexity is increased that leads to higher
+time cost. Moreover, the time cost for DeepCQF and Greedy
+are both in the second level. For DeepCQF, the time cost is
+slightly higher, but varies more gently than Greedy, which can
+achieve a good trade-off between the value and variation.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:17:51 UTC from IEEE Xplore.  Restrictions apply. 
+0
+500
+1000
+2000
+2500
+3000
+1500
+0
+100
+200
+300
+400
+500
+600
+700
+Scheduled )ORZNumber
+700 Flows | T=400us | 3eriods=[1600,3200]us
+'HHS&4)
+Tabu-ITP
+DDQN
+(SLVRGHV,WHUDWLRQV
+(a)
+DDQN
+SMT
+Tabu-ITP
+'HHS&4)
+Greedy
+0
+100
+200
+300
+400
+500
+600
+700
+Scheduled)ORZ Number
+Time Interval=100us
+Time Interval=200us
+Time Interval=400us
+Time Interval=800us
+Time Interval=1600us
+700 Flows | 3eriods=[1600us,3200us]
+$OJRULWKPV
+(b)
+DDQN
+SMT
+Tabu-ITP
+'HHS&4)
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+Resource Utilization
+Time Interval=100us
+Time Interval=200us
+Time Interval=400us
+Time Interval=800us
+Time Interval=1600us
+700 Flows | Periods=[1600us,3200us]
+Greedy
+$OJRULWKPV
+(c)
+DDQN
+SMT
+Tabu-ITP
+'HHS&4)
+Greedy
+0
+100
+200
+300
+400
+500
+600
+700
+Scheduled)ORZ Number
+3eriods=[400us,1600us,3200us]
+3eriods=[1600us, 3200us]
+3eriods=[1600us, 3200us, 4800us]
+700 Flows | T=400us
+$OJRULWKPV
+(d)
+Fig. 5. Performance evaluation. (a) Iterative searching or training process; (b)
+Impact of time interval size; (c) Temporal resource utilization; and (d) Impact
+of ﬂow periods.
+B. Scheduling on TSN Testbed in Real Environments
+Implementations on TSN testbed: As shown in Fig. 4(a),
+our TSN testbed utilizes the fully centralized architecture ac-
+cording to IEEE 802.1Qcc. We build the benchmark topology,
+which has 10 hosts and 2 switches, depicted in Fig. 4(b).
+Each NIC of the devices is INTEL I210. The algorithm is
+implemented in the Centralized Network Conﬁguration (CNC)
+of controller with AMD R9 5950X CPU, 32GB of RAM. The
+CQF based shaper is implemented by using Trafﬁc Control
+(TC) tool executing the queuing discipline of TAPRIO. We use
+LinuxPTP to synchronize the system clock. The time interval
+size is 400us, and the Ring parameters of TX and RX are 1024.
+The TT ﬂows are created from the SAMPLE-APP-TAPRIO
+ﬂow generator [12] with the periods {1600us, 3200us}. Taking
+50 TT ﬂows with 100,000 packets for scheduling as an
+example, the experiment procedures and results are listed:
+Step 1: Registration. The TT ﬂows with the random source
+and destination addresses are registered by users to Centralized
+User Conﬁguration (CUC) and stored in the database.
+Step 2: Gathering. CNC gathers the network status through
+the Link Layer Discovery Protocol (LLDP).
+Step 3: Computing. Based on the ﬂow features and the net-
+work status extracted from the database, DeepCQF computes
+the temporal resource allocation policy for each ﬂow.
+Step 4: Deployment. CNC deploys the GCL and computing
+results to the hosts and switches through the Network Conﬁg-
+uration Protocol (NETCONF) to schedule the ﬂows.
+In Fig. 6(b), the scheduling results show that for the packets
+traversing one switch along the path, the average end-to-end
+latency is 311.29us with a maximum not exceeding 800us.
+For the packets transmitting through two switches, the end-to-
+end latency is on an average of 686.28us and the maximum
+is not greater than 1200us. The jitter of all the packets is
+188.21us on average and is no more than 700.08us. The results
+100
+200
+300
+500
+600
+700
+400
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+1.6
+1.8
+2
+Time Cost (s)
+700 Flows | T=400us
+'HHS&4), s2
+Greedy, s2
+SMT, s2
+'HHS&4), s3
+Greedy, s3
+SMT, s3
+'HHS&4), s1
+Greedy, s1
+SMT, s1
+1XPEHURI)ORZV
+(a)
+0
+200
+400
+600
+800
+1000
+1200
+Delay (us)
+0
+2000
+4000
+6000
+8000
+10000
+12000
+Number of Packets
+Latency
+Jitter
+Max Latency
+Max Jitter
+1000
+1100
+1200
+0
+500
+1000
+1500
+100,000 Packets | T=400us | 3eriods=[1600,3200]us
+(b)
+Fig. 6.
+Experiment results. (a) Time cost comparison; and (b) End-to-end
+latency and jitter measured on our TSN testbed.
+demonstrate that the scheduling on our TSN testbed satisﬁes
+the deterministic requirements of end-to-end latency (N +1)×
+T, which are 800us and 1200us for transmitting through one
+and two switches, respectively, and the jitter 2 × T = 800us
+according to the CQF model.
+V. CONCLUSION
+In this paper, we have developed an algorithm named
+DeepCQF to deal with the temporal scheduling problem in
+CQF based TSN networks in the off-line and on-line scenarios,
+respectively. The experiment results have demonstrated that
+the DeepCQF has higher schedulability, temporal resource
+utilization, and lower time cost under various system settings.
+The practicability of scheduling has been validated by running
+different TT ﬂows on our TSN testbed in real environments. In
+the future, designing novel mixed ﬂow scheduling algorithms
+with CQF model would be an interesting direction.
+REFERENCES
+[1] J. Prados-Garzon, T. Taleb, and M. Bagaa, “LEARNET: Reinforcement
+Learning Based Flow Scheduling for Asynchronous Deterministic Net-
+works,” in Proc. IEEE ICC, June 2020, pp. 1–6.
+[2] A. A. Syed, S. Ayaz, T. Leinm¨uller, and M. Chandra, “Dynamic
+Scheduling and Routing for TSN based In-vehicle Networks,” in Proc.
+IEEE ICC Workshops, June 2021, pp. 1–6.
+[3] A. Nasrallah, V. Balasubramanian, A. Thyagaturu, M. Reisslein, and
+H. ElBakoury, “TSN Algorithms for Large Scale Networks: A Survey
+and Conceptual Comparison,” arXiv preprint arXiv:1905.08478, 2019.
+[4] Y. Huang, S. Wang, B. Wu, T. Huang, and Y. Liu, “TACQ: Enabling
+Zero-jitter for Cyclic-Queuing and Forwarding in Time-Sensitive Net-
+works,” in Proc. IEEE ICC, June 2021, pp. 1–6.
+[5] W. Quan, J. Yan, X. Jiang, and Z. Sun, “On-line Trafﬁc Scheduling
+Optimization in IEEE 802.1Qch based Time-Sensitive Networks,” in
+Proc. IEEE HPCC, Dec. 2020, pp. 369–376.
+[6] W. Steiner, S. S. Craciunas, and R. S. Oliver, “Trafﬁc Planning for Time-
+Sensitive Communication,” IEEE Commun. Standards Mag, vol. 2, no. 2,
+pp. 42–47, June 2018.
+[7] J. Yan, W. Quan, X. Jiang, and Z. Sun, “Injection Time Planning:
+Making CQF Practical in Time-Sensitive Networking,” in Proc. IEEE
+INFOCOM, July 2020, pp. 616–625.
+[8] “IEEE Standard for Local and Metropolitan Area Networks – Bridges
+and Bridged Networks – Amendment 29: Cyclic Queuing and Forward-
+ing,” IEEE Std. 802.1Qch-2017, pp. 1–30, June 2017.
+[9] “IEEE Standard for Local and Metropolitan Area Networks – Bridges
+and Bridged Networks - Amendment 25: Enhancements for Scheduled
+Trafﬁc,” IEEE Std 802.1Qbv-2015, pp. 1–57, Mar. 2016.
+[10] W. Zhang, D. Yang, W. Wu, H. Peng, N. Zhang, H. Zhang, and X. Shen,
+“Optimizing Federated Learning in Distributed Industrial IoT: A Multi-
+Agent Approach,” IEEE J. Sel. Areas Commun., Oct. 2021.
+[11] Industrial Internet Consortium, “Time Sensitive Networks for Flexible
+Manufacturing Testbed Characterization and Mapping of Converged
+Trafﬁc Types,” Mar. 2019.
+[12] Intel Corporation, “TSN Reference Software for Linux,” https://github.
+com/intel/iotg tsn ref sw/tree/apollolake-i/, Apr. 2019.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on June 27,2023 at 07:17:51 UTC from IEEE Xplore.  Restrictions apply. 

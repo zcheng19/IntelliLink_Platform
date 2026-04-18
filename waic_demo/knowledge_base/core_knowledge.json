@@ -1,0 +1,324 @@
+{
+  "author": {
+    "name": "程宗荣",
+    "background": "博士，工业互联网专业，院士团队",
+    "institution": "北京交通大学"
+  },
+  "knowledge_items": [
+    {
+      "id": "e2edrs",
+      "type": "论文",
+      "name": "E2eDRS - 端到端深度强化学习确定性资源调度",
+      "source": "IEEE TMC",
+      "title": "Intelligent End-to-end Deterministic Scheduling Across Converged Networks",
+      "quality": "SCI检索, CCF A类, JCR Q1",
+      "retrieval_no": "DOI: 10.1109/TMC.2025.3530486",
+      "problem": "异构融合网络（5G+TSN+WiFi-6）的端到端确定性保障问题",
+      "method": "基于深度强化学习的端到端确定性资源调度算法",
+      "key_innovation": [
+        "全局端到端控制平面，抽象确定性相关资源",
+        "支持水平架构（异构网络互联）和垂直架构（并行水平网络）",
+        "通过动作组设置支持不同网络维度"
+      ],
+      "performance": {
+        "schedulable_flow_horizontal": "比MultiDRS提升1.33x，比MultiNaive提升6.01x",
+        "server_load_balance_horizontal": "比MultiDRS优化2.65x，比MultiNaive优化3.87x",
+        "vertical_scheduling": "在垂直调度上同样表现优异"
+      },
+      "application_scenarios": [
+        "5G+TSN融合网络",
+        "工业物联网",
+        "车联网",
+        "远程控制",
+        "自动驾驶"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/端到端多维资源协同适配_IEEE_TMC.pdf"
+    },
+    {
+      "id": "timedrs",
+      "type": "论文",
+      "name": "TimeDRS - 时间相关DRL资源调度",
+      "source": "IEEE TON",
+      "title": "Burst-Aware Time-Triggered Flow Scheduling With Enhanced Multi-CQF in Time-Sensitive Networks",
+      "quality": "SCI检索, CCF A类, JCR Q2",
+      "retrieval_no": "WOS: 000972313500001",
+      "problem": "TSN中周期性时间触发流(TT)和突发流的混合调度问题",
+      "method": "Enhanced Multi-CQF队列模型 + TimeDRS时间相关DRL调度算法",
+      "key_innovation": [
+        "设计增强型Multi-CQF模型支持突发流任意时刻发送",
+        "不影响TT流的确定性传输",
+        "可扩展到TDMA等其他时间相关调度场景"
+      ],
+      "performance": {
+        "bursting_flow": "大幅减少突发流的帧丢失和端到端时延",
+        "schedulability": "保持良好可调度性和运行时性能"
+      },
+      "application_scenarios": [
+        "工业控制系统",
+        "智能制造",
+        "实时音视频传输",
+        "金融交易系统"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/多队列映射转发与混合流调度机制设计_IEEE_TON.pdf"
+    },
+    {
+      "id": "deepcqf",
+      "type": "论文",
+      "name": "DeepCQF - 深度强化学习辅助的两阶段CQF调度",
+      "source": "IEEE ICC",
+      "title": "DeepCQF: Making CQF Scheduling More Intelligent and Practicable",
+      "quality": "ISTP检索, CCF C类",
+      "retrieval_no": "WOS: 000864709901050",
+      "problem": "CQF模型下时间触发流(TT)的高效智能调度问题",
+      "method": "深度强化学习(DRL)辅助的两阶段调度算法，支持离线和在线场景",
+      "key_innovation": [
+        "两阶段机制：离线场景结合DRL和启发式算法提升可调度性",
+        "在线场景DRL即时响应到达流",
+        "解决CQF模型时间调度的高效性和智能化问题"
+      ],
+      "performance": {
+        "accommodating_flows": "比Greedy算法平均提升2倍可调度流数量",
+        "convergence_speed": "比Double Deep Q-network算法最多提升3倍收敛速度"
+      },
+      "application_scenarios": [
+        "工业自动化",
+        "汽车控制系统",
+        "航空电子应用",
+        "移动回传网络"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/两阶段业务流智能化调度方法设计_IEEE_ICC.pdf"
+    },
+    {
+      "id": "joint_rs_cqf",
+      "type": "论文",
+      "name": "联合路由与调度算法 for CQF",
+      "source": "IEEE ICCSN",
+      "title": "Joint Routing and Scheduling for CQF",
+      "quality": "EI检索",
+      "retrieval_no": "Accession number: 20223512673211",
+      "problem": "CQF模型下端到端确定性时延的资源高效分配问题",
+      "method": "基于强化学习的联合路由和调度算法",
+      "key_innovation": [
+        "将CQF转化为形式化模型",
+        "综合考虑硬件资源和时延需求进行路径编排",
+        "优化有限带宽资源下的实时流调度"
+      ],
+      "performance": {
+        "transmission_stability": "相比RIP算法传输稳定性更好",
+        "latency_certainty": "时延确定性更优"
+      },
+      "application_scenarios": [
+        "过程自动化",
+        "工业控制通信",
+        "实时测量数据传输",
+        "确定性网络服务"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/Joint_Routing_and_Scheduling_for_CQF.pdf"
+    },
+    {
+      "id": "e2edet",
+      "type": "论文",
+      "name": "E2eDet - 广义确定性标识网络",
+      "source": "电子学报",
+      "title": "Generalized Deterministic Identification Networks",
+      "quality": "北大核心, CCF A类",
+      "retrieval_no": "Accession number: 20241315802363",
+      "problem": "现有确定性网络仅关注传输要素，无法支撑算网融合、绿色通信等多要素确定性需求",
+      "method": "基于深度强化学习的端到端确定性资源调度(E2eDet)算法",
+      "key_innovation": [
+        "广义确定性标识网络三层架构：差异化服务层、异构融合网络层、智慧化适配层",
+        "支持传输、计算、存储、能量等多要素确定性保障",
+        "完备标识空间统一描述确定性应用和网络要素"
+      ],
+      "performance": {
+        "scheduling_improvement_vs_deepcqf": "比DeepCQF提升28.4%数据流调度数量",
+        "scheduling_improvement_vs_random": "比Random算法提升6.38倍",
+        "trade_off": "较好权衡计算时间和调度能力"
+      },
+      "application_scenarios": [
+        "算网融合",
+        "在网计算",
+        "绿色通信",
+        "能量受限网络",
+        "智能制造",
+        "智能交通"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/广义确定性标识网络_电子学报_本期精选论文.pdf"
+    },
+    {
+      "id": "dtf",
+      "type": "论文",
+      "name": "DTF - TSN-5G时频资源联合调度",
+      "source": "IEEE ICCSN Best Paper",
+      "title": "Joint Time-Frequency Resource Scheduling over CQF-based TSN-5G System",
+      "quality": "EI检索, Best Paper",
+      "retrieval_no": "Accession number: 20235015190812",
+      "problem": "CQF-based TSN与5G系统融合场景下的时频资源联合调度问题",
+      "method": "DRL辅助的时频资源联合调度算法(DTF)",
+      "key_innovation": [
+        "时间感知的5G数据包转发策略，支持与TSN无缝通信",
+        "二维链路容量利用率矩阵，高效学习时间间隔与容量关系",
+        "以流为单位联合分配时间间隔和频率资源"
+      ],
+      "performance": {
+        "schedulable_flow_vs_deepcqf": "比DeepCQF提升54.2%可调度流数量",
+        "schedulable_flow_vs_naive": "比Naive算法提升3.5倍",
+        "trade_off": "运行时和可调度性之间良好权衡"
+      },
+      "application_scenarios": [
+        "TSN-5G融合网络",
+        "自动驾驶",
+        "远程手术",
+        "虚拟现实",
+        "5G工业专网"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/TSN-5G时频资源联合调度优化_IEEE_ICCSN_BestPaper.pdf"
+    },
+    {
+      "id": "patent1",
+      "type": "专利",
+      "name": "时敏业务流和路由联合调度规划方法及装置",
+      "source": "国家发明专利",
+      "title": "一种对时敏业务流和路由联合调度的规划方法及装置",
+      "patent_no": "CN 114374647 B",
+      "apply_date": "2021.11.30",
+      "problem": "时敏业务流的路由选择和调度规划需要联合优化，传统分离处理方式效率低下",
+      "method": "获取时敏业务流、网络拓扑和网络状态信息，进行联合调度规划",
+      "key_innovation": [
+        "时敏流特征与网络状态联合分析",
+        "路由和调度的协同优化机制",
+        "支持动态网络环境下的实时规划"
+      ],
+      "application_scenarios": [
+        "时间敏感网络",
+        "工业控制网络",
+        "实时通信系统"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/一种对时敏业务流和路由联合调度的规划方法及装置.pdf",
+      "certificate_pdf": "D:/level_2/找工作/证书及材料/专利证书1.pdf"
+    },
+    {
+      "id": "patent2",
+      "type": "专利",
+      "name": "在线规划时间敏感流的方法、装置及存储介质",
+      "source": "国家发明专利",
+      "title": "一种在线规划时间敏感流的方法、装置及存储介质",
+      "patent_no": "CN 114422453 A",
+      "apply_date": "2021.11.30",
+      "problem": "网络中在线对动态时间敏感流和路由联合调度规划的难题",
+      "method": "基于Double DQN深度强化学习算法的在线规划方法",
+      "key_innovation": [
+        "Double DQN深度强化学习求解器",
+        "提取时间敏感流关键特征和网络关键特征",
+        "基于CQF机制构建状态和动作空间",
+        "优化目标驱动的奖励机制设计"
+      ],
+      "performance": {
+        "adaptability": "提高网络对动态业务流的适应能力"
+      },
+      "application_scenarios": [
+        "动态时间敏感流调度",
+        "在线网络规划",
+        "实时资源分配"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/一种在线规划时间敏感流的方法装置及存储介质.pdf",
+      "certificate_pdf": "D:/level_2/找工作/证书及材料/HA202106791-发明专利证书-一种在线规划时间敏感流的方法.pdf"
+    },
+    {
+      "id": "patent3",
+      "type": "专利",
+      "name": "普适的异构融合算网资源智慧适配网络架构及方法",
+      "source": "国家发明专利",
+      "title": "一种普适的异构融合算网资源智慧适配网络架构及方法",
+      "patent_no": "CN 115665227 B",
+      "apply_date": "2022.12.28",
+      "problem": "异构融合网络横向资源耦合、纵向调度不协调的难题",
+      "method": "智慧融合服务层、智慧融合适配层、智慧融合网络层三层架构",
+      "key_innovation": [
+        "三层架构设计：服务层、适配层、网络层",
+        "异构服务侧业务特征与异构网络侧资源特征统一提取",
+        "普适化网络模型支持横向和纵向不同调度场景",
+        "端到端全局优化视角解决资源联合分配"
+      ],
+      "performance": {
+        "scalability": "提高网络可扩展性",
+        "scheduling_performance": "提升调度性能"
+      },
+      "application_scenarios": [
+        "异构融合网络",
+        "算网融合",
+        "横向资源耦合场景",
+        "纵向调度协调场景"
+      ],
+      "original_pdf": "D:/level_2/找工作/证书及材料/一种普适的异构融合算网资源智慧适配网络架构及方法.pdf",
+      "certificate_pdf": "D:/level_2/找工作/证书及材料/专利证书2.pdf"
+    },
+    {
+      "id": "standard1",
+      "type": "标准",
+      "name": "工业互联网 时间敏感网络测试方法",
+      "source": "中国通信标准化协会CCSA行业标准",
+      "standard_no": "YD/T 6568-2025",
+      "abstract": "本标准规定了工业互联网场景下时间敏感网络（TSN）的测试方法，包括时间同步、流量整形、帧抢占、帧复制消除等关键功能的测试流程与判定准则，为TSN设备的互联互通和性能验证提供标准化测试依据。",
+      "original_pdf": "D:/level_2/找工作/证书及材料/2022-1462T-YD_工业互联网 时间敏感网络测试方法.pdf"
+    },
+    {
+      "id": "standard2",
+      "type": "标准",
+      "name": "工业互联网 时间敏感网络承载工业通信协议技术要求",
+      "source": "中国通信标准化协会团体标准",
+      "standard_no": "T/CCSA 491-2024",
+      "abstract": "本标准规定了时间敏感网络承载工业通信协议的技术要求，涵盖PROFINET、EtherNet/IP、Modbus TCP等主流工业协议在TSN网络中的适配规范，包括协议映射、服务质量保障、确定性传输机制等关键技术要求。",
+      "original_pdf": "D:/level_2/找工作/证书及材料/TCCSA 491-2024 工业互联网 时间敏感网络承载工业通信协议技术要求.pdf"
+    }
+  ],
+  "products": {
+    "tsn_switch": {
+      "model": "NGIT-TSN-S-I",
+      "certification": "信通院时间敏感网络产业链名录计划认证",
+      "cert_date": "2021年9月28日",
+      "features": [
+        "符合IEEE 802.1Qbv时间感知整形",
+        "支持IEEE 802.1Qbu帧抢占",
+        "符合IEEE 802.1AS时间同步",
+        "支持IEEE 802.1CB帧复制消除"
+      ]
+    },
+    "sdn_controller": {
+      "description": "内嵌深度强化学习流量调度算法的SDN控制器",
+      "capabilities": [
+        "全局网络视图",
+        "智能流量调度",
+        "实时资源优化",
+        "多维度QoS保障"
+      ]
+    }
+  },
+  "key_metrics": {
+    "scheduling_success_rate": "提升60%",
+    "decision_time": "缩短2.5倍",
+    "cost_reduction": "显著降低成本"
+  },
+  "expertise_areas": [
+    "SDN (软件定义网络)",
+    "TSN (时间敏感网络)",
+    "5G专网",
+    "深度强化学习",
+    "流量调度算法",
+    "端到端确定性网络",
+    "工业互联网",
+    "异构网络融合",
+    "CQF循环排队转发",
+    "联合路由与调度",
+    "在线实时调度",
+    "广义确定性网络",
+    "标识网络",
+    "算网融合",
+    "时频资源联合调度"
+  ],
+  "statistics": {
+    "papers_count": 6,
+    "patents_count": 3,
+    "total_knowledge_items": 9
+  }
+}

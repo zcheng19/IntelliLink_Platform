@@ -1,0 +1,2840 @@
+1
+Intelligent End-to-end Deterministic Scheduling
+Across Converged Networks
+Zongrong Cheng, Student Member, IEEE, Dong Yang, Member, IEEE, Weiting Zhang, Member, IEEE,
+Chuan Huang, Hongke Zhang, Fellow, IEEE, and Xuemin (Sherman) Shen, Fellow, IEEE
+Abstract—Deterministic network services play a vital role for supporting emerging real-time applications with bounded low latency,
+jitter, and high reliability. The deterministic guarantee is penetrated into various types of networks, such as 5G, WiFi, satellite, and edge
+computing networks. From the user’s perspective, the real-time applications require end-to-end deterministic guarantee across the
+converged network. In this paper, we investigate the end-to-end deterministic guarantee problem across the whole converged network,
+aiming to provide a scalable method for different kinds of converged networks to meet the bounded end-to-end latency, jitter, and high
+reliability demands of each ﬂow, while improving the network scheduling QoS. Particularly, we set up the global end-to-end control
+plane to abstract the deterministic-related resources from converged network, and model the deterministic ﬂow transmission by using
+the abstracted resources. With the resource abstraction, our model can work well for different underlying technologies. Given large
+amounts of abstracted resources in our model, it is difﬁcult for traditional algorithms to fully utilize the resources. Thus, we propose a
+deep reinforcement learning based end-to-end deterministic-related resource scheduling (E2eDRS) algorithm to schedule the network
+resources from end to end. By setting the action groups, the E2eDRS can support varying network dimensions both in horizontal and
+vertical end-to-end deterministic-related network architectures. Experimental results show that E2eDRS can averagely increase 1.33x
+and 6.01x schedulable ﬂow number for horizontal scheduling compared with MultiDRS and MultiNaive algorithms, respectively. The
+E2eDRS can also optimize 2.65x and 3.87x server load balance than MultiDRS and MultiNaive algorithms, respectively. For vertical
+scheduling, the E2eDRS can still perform better on schedulable ﬂow number and server load balance.
+Index Terms—Deterministic guarantee, end-to-end deterministic-related network architecture, deep reinforcement learning.
+!
+1
+INTRODUCTION
+I
+N recent few years, deterministic network technologies
+have aroused great attention [1], [2], [3]. To promote the
+development of deterministic network technologies, time-
+sensitive networking (TSN) is proposed by IEEE 802.1 TSN
+task group that aims to guarantee the bounded end-to-end
+latency, jitter, and high reliability at the layer 2 of network
+[4], [5], [6]. To further enlarge the scale of deterministic
+network services, the Internet Engineering Task Force (IETF)
+working group proposes the deterministic networking (Det-
+Net), which operates over layer 2 bridged and layer 3 routed
+segments [7], [8].
+Unfortunately, the existing TSN and DetNet technologies
+are too monotonous to satisfy with the increasing demands
+of diversiﬁed real-time applications, such as autonomous
+driving, remote control, among others [9], [10]. To meet the
+differentiated quality of service (QoS) demands in various
+applications, the deterministic guarantee is penetrated into
+This work was supported in part by the National Key Research and
+Development Program of China under Grant 2022YFB2901302, in part by the
+National Natural Science Foundation of China under Grant 62201029, in part
+by the China Postdoctoral Science Foundation under Grants 2022M710007
+and BX20220029. (Corresponding author: Dong Yang, Weiting Zhang.)
+Zongrong Cheng, Dong Yang, Weiting Zhang, and Hongke Zhang
+are with the School of Electronic and Information Engineering, Beijing
+Jiaotong University, Beijing 100044, China (e-mail: zrcheng@bjtu.edu.cn;
+dyang@bjtu.edu.cn; wtzhang@bjtu.edu.cn; hkzhang@bjtu.edu.cn).
+Chuan Huang is with the Future Network of Intelligence Institute (FNii)
+and the School of Science and Engineering, the Chinese University of Hong
+Kong, Shenzhen 518172, China, and also with the Peng Cheng Laboratory,
+Shenzhen 518066, China (e-mail: huangchuan@cuhk.edu.cn).
+Xuemin (Sherman) Shen is with the Department of Electrical and Computer
+Engineering, University of Waterloo, Waterloo N2L 0B5, Canada (e-mail:
+sshen@uwaterloo.ca).
+more types of networks. To enhance the determinacy of
+wireless networks, Li et al. [11] proposed a decentralized
+ﬂow scheduling method to intelligently make packet trans-
+mission decisions for collision-free 5G systems. Jiang et
+al. [12] developed a deterministic satellite network trans-
+mission approach to predict all upcoming communication
+opportunities and construct deterministic routing paths.
+Sudhakaran et al. [13] presented a method to conﬁgure the
+WiFi-enabled TSN and meet the application time budget.
+In multi-access edge computing networks, Peng et al. [14]
+proposed a task deterministic network architecture to en-
+sure the bounded ﬂow transmission latency and zero jitter
+for critical tasks. As such, each type of network has its
+own architecture and underlying technologies to enable the
+deterministic services.
+However, from the user’s point of view, the real-time
+applications need end-to-end deterministic guarantee across
+the converged network, which is composed by multiple
+heterogeneous networks [2], [15], [16]. Unluckily, the con-
+vergence of different deterministic networks is still at the
+early stage, existing approaches for deterministic guarantee
+are restricted to their focused type of network and study
+each network in isolation [17], [18], [19]. None of the related
+works consider a scalable method to ensure the end-to-end
+determinacy over the whole converged network. Inspired
+by increasing the practicability, we investigate the end-
+to-end deterministic guarantee problem across the whole
+converged network, aiming to provide a scalable method
+for different kinds of converged networks to satisfy with
+the bounded end-to-end latency, jitter, and high reliability
+requirements of each ﬂow, while improving the network
+2
+scheduling QoS.
+In this paper, we introduce two types of network archi-
+tectures for network converging, namely horizontal and ver-
+tical end-to-end deterministic-related network architectures.
+Fig. 1(a) shows the horizontal end-to-end deterministic-
+related network architecture [20], which is composed by
+heterogeneous deterministic networks inter-connected with
+each other, such as 5G+TSN+WiFi-6. The vertical end-to-
+end deterministic-related architecture [21] shown in Fig. 1(b)
+is formed by multiple paralleled horizontal networks. In
+this architecture, the network with higher communication
+quality can be selected to transmit the ﬂows so that the end-
+to-end latency, throughput, etc. can be optimized. Moreover,
+the multiple paralleled networks can serve as redundancies
+to enhance the ﬂow transmission reliability.
+Nevertheless, it is of great challenge for off-the-shelf
+isolated approaches to support the end-to-end converged
+network determinacy both in horizontal and vertical end-
+to-end deterministic-related network architectures. Firstly,
+because the underlying technologies of heterogeneous de-
+terministic networks are very different [15], [22], the isolated
+approaches for each type of network cannot be scaled into
+the whole converged network. Therefore, the network per-
+formance and scalability are degraded. In addition, large
+number of isolated approaches in control plane need to
+repeatedly negotiate with each other [23], [24]. This ne-
+gotiation process can signiﬁcantly increase the computa-
+tional time and energy cost. Hence, there is a great need
+for converged network to scale and unify the approaches.
+Moreover, existing approaches only focus on time slot and
+frequency resources to support determinacy. It cannot meet
+the resource scheduling requirement of converged network
+with more deterministic-related resources, such as comput-
+ing, energy, and memory resources.
+Based on the commonality of network properties, we
+overcome the challenges by managing the abstracted re-
+sources from converged network. In speciﬁc, we set up a
+global end-to-end control plane to manage the ﬂow trans-
+mission in different network architectures from end to end.
+To guarantee the determinacy, the end-to-end deterministic-
+related resource abstraction model is established by lever-
+aging the abstracted deterministic-related resources from
+monitor module in control plane. The network resource
+abstraction can effectively eliminate the gap caused by d-
+ifferent underlying network technologies. As such, the end-
+to-end deterministic-related resource abstraction model is
+not restricted to any ﬁxed networks. Extended from the
+existing deterministic technologies that focus on time slot
+and frequency resources, we also jointly consider more
+resources in the model, such as routing, power, computing,
+memory, and energy resources.
+To optimize the network QoS, the abstracted resources
+in our model need to be scheduled. The resource scheduling
+in single deterministic network has been proved as an NP-
+hard [3], [17]. Thus, the multiple network scheduling in our
+architecture could be more complex. Traditional scheduling
+algorithms, such as dynamic programming and heuristics,
+are too computational time cost and lack of ﬂexibility [25].
+To improve the resource scheduling efﬁcacy, we propose
+a deep reinforcement learning (DRL) based end-to-end
+deterministic-related resource scheduling (E2eDRS) algo-
+WiFi-6
+AP
+S1
+BS
+H1
+H2
+H3
+H4
+H5
+H6
+H7
+S2
+S3
+S4
+S5
+G1
+G2
+TSN+5G
+TSN
+Computing module
+Computing module
+Computing module
+Data flow
+Data flow
+Enforcement module
+Enforcement module
+Monitor module
+Monitor module
+Registration 
+module
+Registration 
+module
+Abstracted network 
+resource status
+Information 
+Delivery
+Decision 
+deployment
+Monitored 
+features
+Feedback
+Feedback
+Scheduling 
+decision
+Data plane
+End-to-end Control plane
+QoS 
+demands
+End-to-end flow 
+transmission
+(a)
+H6
+H7
+H5
+H8
+End devices
+H6
+H7
+H5
+H8
+End devices
+WiFi-6
+Computing module
+Computing module
+Computing module
+Enforcement module
+Enforcement module
+Monitor module
+Monitor module
+Registration 
+module
+Registration 
+module
+Information 
+Delivery
+Decision 
+deployment
+Monitored 
+features
+Feedback
+Feedback
+Scheduling 
+decision
+Data plane
+End-to-end Control plane
+QoS 
+demands
+Abstracted network 
+resource status
+H2
+H3
+H1
+H4
+AP
+Data flow
+Data flow
+(
+)
+1
+,
+g
+v e
+AP
+S1
+S2
+S3
+S4
+BS
+AP
+Data flow
+(
+)
+1
+,
+g
+v e
+AP
+S1
+S2
+S3
+S4
+BS
+AP
+Data flow
+Data flow
+(
+)
+2
+,
+g
+v e
+S1
+S2
+S3
+S4
+BS
+AP
+Data flow
+(
+)
+2
+,
+g
+v e
+S1
+S2
+S3
+S4
+BS
+AP
+Data flow
+Data flow
+S1
+S2
+S3
+S4
+BS
+End devices
+5G
+TSN
+(
+)
+,
+n
+g
+v e
+End-to-end flow 
+transmission
+End-to-end flow 
+transmission
+1
+2
+3
+(b)
+Fig. 1. Horizontal and vertical end-to-end deterministic-related network
+architectures. (a) horizontal network architecture; and (b) vertical net-
+work architecture.
+rithm. Different from the existing DRL-based scheduling al-
+gorithms that only schedule the available resources in their
+isolated and ﬁxed networks [23], [26], the E2eDRS embeds
+with an end-to-end resource consumption matrix to focus on
+end-to-end deterministic-related resource scheduling over
+converged network ﬂexibly composed by heterogeneous
+networks. This matrix can also assist E2eDRS extending into
+more generic time-related network resource scheduling sce-
+narios, such as joint time-frequency domain scheduling, or
+other types of time division multiple access (TDMA) based
+resource scheduling in converged network. In addition,
+by setting up the action groups, the E2eDRS can support
+varying network dimensions both in horizontal and vertical
+end-to-end deterministic-related network architectures.
+The scheduling performance is evaluated in horizontal
+and vertical end-to-end deterministic-related network archi-
+tectures with the benchmark 5G+TSN converged network
+topologies. For horizontal scheduling, our E2eDRS algorith-
+m can averagely increase 1.33x and 6.01x schedulable ﬂow
+number compared with MultiDRS and MultiNaive algo-
+rithms, respectively. The E2eDRS can also optimize 2.65x
+and 3.87x server load balance than MultiDRS and Multi-
+Naive, respectively. For vertical scheduling, the E2eDRS still
+performs better on schedulable ﬂow number and server
+load balance compared with MultiDRS and MultiNaive
+algorithms. Moreover, E2eDRS makes a good trade-off be-
+tween computational time cost and scheduling ability. These
+experimental results indicate that the global end-to-end de-
+terministic scheduling performs better than the independent
+optimization of each network. The contributions of this
+paper are as follows:
+3
+•
+Horizontal and vertical end-to-end deterministic-
+related network architectures. We present horizon-
+tal and vertical end-to-end deterministic-related net-
+work architectures for network converging. The hor-
+izontal and vertical architectures can abstract the
+deterministic-related resources from horizontal and
+vertical scheduling scenarios, respectively.
+•
+End-to-end
+deterministic-related
+resource
+ab-
+straction
+model.
+We
+establish
+the
+end-to-end
+deterministic-related resource abstraction model to
+guarantee the end-to-end determinacy in horizon-
+tal and vertical end-to-end deterministic-related net-
+work architectures. With the resource abstraction, the
+model works well for heterogeneous deterministic
+networks. The routing, time slot, spectrum, power,
+computing, and memory resources are jointly con-
+sidered by this model.
+•
+DRL-based
+end-to-end
+deterministic-related
+re-
+source scheduling algorithm. We propose the DRL-
+based
+end-to-end
+deterministic-related
+resource
+scheduling algorithm, namely E2eDRS, to effectively
+schedule a large number of abstracted deterministic-
+related resources in our model. Embedded with
+an end-to-end resource consumption matrix, the
+E2eDRS can focus on end-to-end scheduling across
+the converged network. E2eDRS can also be used
+in generic time-related resource scheduling scenar-
+ios, such as TDMA-based resource scheduling. The
+action groups in E2eDRS support varying network
+dimensions in different architectures.
+The remainder of this paper is organized as fol-
+lows. Section 2 presents horizontal and vertical end-to-
+end deterministic-related network architectures for deter-
+ministic network converging. To guarantee the network
+determinacy, the end-to-end deterministic-related resource
+abstraction model is also established. Section 3 formulates
+the multi-objective optimization problem for scheduling
+deterministic-related resources in our model, and trans-
+forms the problem into a Markov Decision Process (MDP).
+Section 4 proposes the E2eDRS algorithm to schedule the
+deterministic-related resources from end to end. Finally,
+Section 6 concludes this paper.
+2
+THE
+END-TO-END
+DETERMINISTIC-RELATED
+RESOURCE ABSTRACTION MODEL
+This section proposes the end-to-end deterministic-related
+resource abstraction model that supports both horizontal
+and vertical end-to-end deterministic-related network ar-
+chitectures. In this model, different network resources, in-
+cluding routing, time slot, spectrum, power, computing, and
+memory resources are abstracted from the heterogeneous
+networks to jointly guarantee the deterministic ﬂow trans-
+mission from end to end. With the abstracted resources and
+ﬂow features of the model, the deterministic guarantee is
+not restricted to any speciﬁc networks, such as TSN, DetNet
+or 5G+TSN. Any inter-connected networks that provide
+deterministic transmission related resources can be jointly
+planned. The model focuses on end-to-end network perfor-
+mance when the ﬂow goes through different networks.
+2.1
+Horizontal and Vertical End-to-end Deterministic-
+related Network Architectures
+In real industrial scenario, different networks are converged
+in horizontal and vertical forms impacting scheduling per-
+formance. Hence, the end-to-end deterministic-related re-
+source abstraction model needs to support both horizontal
+and vertical end-to-end deterministic-related network archi-
+tectures. The two architectures are introduced as follows.
+Fig. 1(a) shows the horizontal end-to-end deterministic-
+related network architecture. In data plane, different net-
+works, such as TSN, 5G, and WiFi-6, connect with each oth-
+er, and they converge into one horizontal network denoted
+as net1. The data ﬂow can be transmitted across net1 based
+on the deployed deterministic scheduling policy. The control
+plane globally schedules the deterministic-related resources
+for horizontal network from end to end. In speciﬁc, the
+registration module collects the ﬂow information and QoS
+demands generated by users, and delivers these information
+to the monitor module. The monitor module also detects
+the network resource status and system feedbacks through
+signaling. The detected information by monitor module is
+then encapsulated into the monitored features and passed to
+the computing module. To globally schedule the ﬂows from
+end to end, the computing module observes the monitored
+features and jointly infers the deterministic-related resource
+scheduling policies based on optimization goals. Then, the
+computed policies are deployed into the network by en-
+forcement module. Network protocols, such as NETCONF,
+can be used to conﬁgure the network devices, and the
+conﬁguration results are fed back to further improve the
+training performance.
+Moreover, multiple paralleled horizontal networks can
+compose
+a
+vertical
+network.
+The
+vertical
+end-to-end
+deterministic-related network architecture is depicted by
+Fig. 1(b). In data plane, the paralleled horizontal networks
+are denoted as net1, net2, . . . , netn, respectively. When a
+new ﬂow arrives, a better network netϵ can be selected
+for ﬂow transmission by the controller. By this way, the
+scheduling QoS can be further improved. Let the undirected
+graph G(V, E) be the physical network topology. V and
+E denote a set of nodes and links, respectively. G(V, E)
+includes all nodes and links in the network, thus
+G(V, E) = {vi, [vi, vk]|∀vi ∈V, ∀[vi, vk] ∈E, vi ̸= vk}.
+(1)
+G(V, E) consists of multiple paralleled horizontal net-
+works with topology gϵ(v, e). As a special case, when the
+network architecture is horizontal, then g1(v, e) ∼= G(V, E).
+Each ﬂow fj ∈F going through the network is featured
+by ﬂow ID, source address, destination address, packet size,
+packet number, latency and jitter requirements, etc. These
+ﬂow features can be described by
+fj = {idj, srcj, dstj, sizej, numj, Dreq
+j
+, J req
+j
+},
+(2)
+where j = 1, 2, . . . , |F|, and |F| is the total number of
+ﬂows. As a big shining point, the end-to-end deterministic
+scheduling mechanism in control plane can also be scaled
+into our vertical end-to-end deterministic-related network
+architecture. Hence, we focus on the design of deterministic-
+related resource scheduling mechanism for both horizontal
+and vertical networks in control plane.
+4
+2.2
+End-to-end
+Deterministic-related
+Resource
+Ab-
+straction Model
+To ensure the deterministic ﬂow transmission across the
+horizontal and vertical end-to-end deterministic-related net-
+work architectures, the end-to-end deterministic-related re-
+source abstraction model is set up by using the monitored
+features. End-to-end bounded ﬂow transmission latency,
+jitter, and high reliability are the core indicators of deter-
+ministic ﬂow transmission. The end-to-end latency refers
+to the summation of ﬂow transmission delay on each node
+and link along its path. Let D(vi)
+j
+and D(ℓ)
+j
+denote the delay
+on each node vi and link ℓ, respectively. The ℓis the link
+between adjacent nodes [vi, vi+1]. Hence, the end-to-end
+latency Dj can be described by
+Dj =
+N
+X
+i=1
+D(vi)
+j
++
+L
+X
+ℓ=1
+D(ℓ)
+j ,
+(3)
+where N and L are the number of nodes and links that the
+ﬂow goes through. The jitter is end-to-end latency variance
+of each ﬂow. Let D(k)
+j
+be the end-to-end latency of ﬂow fj on
+packet k. Hence, the ﬂow jitter Jj is the difference between
+maximal and minimal packet latency, described by
+Jj =
+max(D(k)
+j
+) −min(D(k)
+j
+)
+.
+(4)
+The high reliability requires zero packet loss of each
+ﬂow. Thus, the rate of packet loss should be measured. Let
+function φ(·) indicate whether the ﬂow can be successful-
+ly scheduled. φ(·) = 1 indicates the ﬂow is successfully
+scheduled, otherwise, φ(·) = 0. Then, the packet loss rate
+is described by
+Rj =
+numj −
+numj
+P
+k=1
+φ(f (k)
+j
+)
+
+numj
+× 100%,
+(5)
+where f (k)
+j
+is the k-th frame of ﬂow fj.
+In real systems, end-to-end deterministic ﬂow transmis-
+sion can be ensured by using different underlying tech-
+nologies across heterogeneous networks, such as queuing
+gates, 5G TSN-translators, etc. However, the differentiated
+underlying technologies involving physical, MAC, network,
+and higher layers bring the difﬁculty for network inter-
+connection and end-to-end modeling. Fortunately, these
+technologies commonly aim to schedule the deterministic-
+related resources to ensure the determinacy. To overcome
+the challenge and focus on end-to-end modeling, we ab-
+stract deterministic-related resources from G(V, E) support-
+ed by the underlying technologies in different layers. As
+such, the end-to-end deterministic ﬂow transmission is
+guaranteed by allocating the abstracted resources in essence.
+Extended from existing trafﬁc shaping technologies that
+mainly consider time slot and frequency resources, our
+abstracted resources not only involve routing, time slot, fre-
+quency, and power for ﬂow transmission, but also embrace
+the computing, energy, and memory resources at each node
+for deterministic processing.
+Routing resource is the ﬂow path allocated to fj. Along
+the ﬂow path, the requirements of bounded transmission
+latency, jitter, and high reliability need to be satisﬁed. To
+avoid increasing the latency and jitter, the path with no-
+loop is required. The D(ℓ)
+j
+in Eq. (3) maps the allocated
+time slot resource on link ℓ. To guarantee the high reliable
+transmission during the transmission time D(ℓ)
+j , the model
+requires that the ﬂow fj should be accommodated within
+D(ℓ)
+j . And the occupied time slot size of D(ℓ)
+j
+cannot exceed
+the upper limit Cℓ. Hence,
+sizej ≤B(ℓ)
+j
+× D(ℓ)
+j
+≤Cℓ,
+(6)
+where B(ℓ)
+j
+is the link bandwidth that ﬂow fj occupied.
+Cℓrefers to the maximal link capacity in time slot D(ℓ)
+j .
+Considering wireless networks, both the time slot and fre-
+quency bandwidth resources can affect the deterministic
+transmission. Let γ be the signal to interference noise ratio.
+To accommodate ﬂow fj during the transmission time D(ℓ)
+j ,
+the model requires
+sizej ≤B(ℓ)
+j
+× log2(1 + γ) × D(ℓ)
+j
+≤Cℓ,
+(7)
+where B(ℓ)
+j
+allocated to ﬂow fj is the channel bandwidth.
+The γ reﬂects the quality of received signal. Speciﬁcally, γ
+is determined by power resource for ﬂow transmission. Let
+pℓbe the transmission power on link ℓ. To maintain a high
+communication quality, it requires that the value of γ is no
+less than the threshold γ0. Thus,
+γ =
+pℓ× gℓℓ
+1 + P
+ℓ′ pℓ′ × gℓ′ℓ
+≥γ0,
+ℓ′ ̸= ℓ,
+(8)
+where gℓℓis the channel gain of link ℓ, and gℓ′ℓis the gain of
+interference from link ℓ′ to ℓ.
+Except for link transmission delay, the processing delay
+D(vi)
+j
+on each node also impacts the end-to-end determin-
+istic ﬂow transmission. For the computation-intensive tasks
+carried by each ﬂow, the D(vi)
+j
+maps the computational time
+cost on the node. Let µj ∈[0, 1] indicate the ratio of CPU
+frequency allocated to fj. CPU frequency Qvi means the
+amount of data that node vi can be processed per unit time.
+The ϑ denotes the number of CPU cycles used for dealing
+with one bit data. To complete the computation task within
+D(vi)
+j
+and guarantee the high reliability on each node, the
+model requires that the processed data during D(vi)
+j
+should
+be no smaller than task size size(vi)
+j
+ofﬂoaded on node vi.
+Hence, we have
+µj × Qvi × D(vi)
+j
+ϑ
+≥size(vi)
+j
+.
+(9)
+The computation task consumes the energy Evi on each
+node. To maintain system operation, the consumed energy
+should be constrained within a certain range. Therefore,
+Evi = κ
+2 ϑ × size(vi)
+j
+× (η × µj)2 ≤Ej
+max,
+(10)
+where κ and η are efﬁciency coefﬁcients. The energy thresh-
+old for dealing with fj is denoted as Ej
+max. The memory
+resource Mvi on node vi stores the ﬂow. To avoid the packet
+loss on each node, the memory allocated to fj should be no
+smaller than the required size size(vi)
+j
+. Thus,
+Mvi × χj ≥size(vi)
+j
+,
+(11)
+5
+where χj ∈[0, 1] is the ratio of memory resource allocated
+to fj. Other resource constraints can also be ﬂexibly added
+for end-to-end deterministic transmission guarantee.
+3
+PROBLEM FORMULATION AND TRANSFORMA-
+TION
+This section formulates the multi-objective optimization
+problem based on the end-to-end deterministic-related re-
+source abstraction model. The complexity of solving the
+problem is analyzed, and then the problem is transformed
+into a Markov Decision Process (MDP).
+3.1
+Multi-objective Optimization Problem Formulation
+In the end-to-end deterministic-related resource abstraction
+model, large number of abstracted deterministic-related re-
+sources need to be scheduled to further optimize the end-
+to-end network QoS. Thus, we have the multi-objective
+optimization problem P0, aiming to improve the QoS, such
+as schedulable ﬂow number, load balance, etc. The opti-
+mization goal can be generally described by function F(·).
+The decision variables in the function are the allocated
+deterministic-related resources for each ﬂow fj. The end-
+to-end deterministic-related resource abstraction model can
+provide different deterministic-related resources abstracted
+from the converged network described by Ai(gϵ(v, e)), in-
+cluding routing, time slot, frequency, power, computing,
+memory, and energy resources, among others. The deter-
+ministic ﬂow transmission latency, jitter, and high reliability
+demands should be also satisﬁed in P0. Therefore, the
+optimization problem P0 can be formulated by
+P0 : Max(Min)
+F {fj.Ai(gϵ(v, e))}
+(12)
+s.t.
+Dj ≤Dreq
+j
+,
+(12a)
+Jj ≤J req
+j
+,
+(12b)
+Rj ≈0,
+(12c)
+j = 1, 2, . . . , |F|,
+(12d)
+(6), (7), (8), (9), (10), and (11).
+(12e)
+The Eq. (12a) requires that real end-to-end transmission
+latency Dj does not exceed the ﬂow latency demand Dreq
+j
+.
+To satisfy with the jitter requirement, the Eq. (12b) shows
+that the latency variance of ﬂow cannot exceed the thresh-
+old J req
+j
+. The Eq. (12c) requires near zero packet loss to
+guarantee the high reliable ﬂow transmission. Constrained
+by Eq. (12d), each ﬂow fj should belong to the ﬂow set F.
+The constraints (6), (7), (8), (9), (10), and (11) guarantee the
+proper resource scheduling for the converged network.
+To solve the problem P0, the effective deterministic-
+related resource scheduling algorithm needs to be further
+designed according to the problem complexity analysis.
+3.2
+Problem Analysis
+To design an effective algorithm to solve the problem, the
+complexity of this problem needs to be analyzed.
+Theorem 1. The multi-objective optimization problem P0 de-
+scribed by Eq. (12) is an NP-hard.
+Proof . We use the reduction method to prove Theorem
+1. The core idea of reduction method is to ﬁnd a special
+case of the optimization problem that can be mapped in-
+to an existing well-known NP-hard problem. Speciﬁcally,
+we focus on the time slot resource allocation, and set the
+ﬁxed parameters to other allocated resources. When the
+time slot number is one, whose length is Dℓ
+j, the problem
+is transformed to decide which ﬂow should be injected
+into this time slot, and the corresponding revenue can be
+obtained. Let xj indicate whether ﬂow fj injects into the
+time slot, and rj is the revenue of such an operation. Thus,
+the optimization goal of Eq. (12) is to maximize the total
+revenue, where
+Max
+|F|
+X
+j=1
+rj × xj.
+(13)
+Deduced by the time slot resource constraint of Eq. (6),
+the occupied capacity of all the ﬂows during Dℓ
+j cannot
+exceed the maximal link capacity. Hence, it is subject to
+(
+D(ℓ)
+j
+P|F|
+j=1(B(ℓ)
+j
+× xj) ≤Cℓ,
+xj ∈{0, 1}.
+(14)
+The above model is the same with 0-1 knapsack problem,
+which has been proved as NP-hard. Hence, we prove that
+the 0-1 knapsack problem can be reduced to an instance of
+ours. This completes the proof.
+Theorem 2. The multi-objective optimization problem P0 de-
+scribed by Eq. (12) is non-convex.
+Proof . Firstly, the routing resource constraint of the end-
+to-end deterministic-related resource abstraction model is
+the integer constraint because the decision variable of ﬂow
+path is an integer. The variables of other allocated resources
+in Eq. (6)-(11) are non-negative real numbers. Secondly, the
+non-linear constraint, such as Eq. (10), exists in the mod-
+el. Therefore, the end-to-end deterministic-related resource
+abstraction model describes a mixed-integer non-linear pro-
+gramming problem (MINLP), which has been proved as
+non-convex [27]. This completes the proof.
+Considering the complexity of this NP-hard and non-
+convex problem, the traditional algorithms, such as dynamic
+programming and heuristics, spend too much time to com-
+pute the resource allocation results, and they are difﬁcult to
+adapt to dynamic ﬂow arrival. To effectively learn the re-
+lationship between each time slot and deterministic-related
+resources, we design a DRL-based resource scheduling algo-
+rithm. With our designed shining points, the multi-objective
+optimization problem P0 can be well-solved.
+3.3
+Problem Transformation
+In DRL, the agent learns to perform tasks by interacting with
+environment. At each time step, the agent observes state of
+environment and makes decisions based on the policy pro-
+vided by neural network. The state is then transited and re-
+ward is fed back in terms of Markov Decision Process (MDP)
+[28], [29], [30]. The objective of learning is to optimize the
+expected cumulative reward by updating the policy. As the
+basis of DRL algorithm, we transform the multi-objective
+optimization problem P0 into an MDP. The key point of
+MDP is to build the observation space, action space, and re-
+ward [4], [31]. In state transition process, each incrementally
+added ﬂow utilizes enough deterministic-related resources
+6
+to ensure the end-to-end deterministic transmission latency,
+jitter, and high reliability. Therefore, the observation space O
+should be composed by the deterministic-related resource
+utilization Onet and incrementally added ﬂow features at
+each time step, which can be described by
+O = Onet ∪Oflow.
+(15)
+According to deterministic-related resource constraints,
+including link capacity, CPU frequency, energy, and memory
+resource constraints in problem P0, the key elements of Onet
+should be composed by the utilization of link capacity HCℓ,
+CPU frequency HQvi , computation energy HEvi , and mem-
+ory space HMvi . The state is transited with the changing of
+resource utilization at each time step [32]. Thus, we have
+Onet = {HCℓ, HQvi, HEvi, HMvi},
+(16)
+and each element in Onet is the resource utilization in
+the range of 0∼1. The Oflow comprises each ﬂow features
+described by Eq. (2), which is
+Oflow = {idj, srcj, dstj, sizej, numj, Dreq
+j
+, J req
+j
+}.
+(17)
+The
+deterministic
+ﬂow
+transmission
+relies
+on
+the
+deterministic-related resource scheduling. Therefore, the
+action space A consists of the deterministic-related re-
+source scheduling decisions for each ﬂow fj, which is
+described by the decision variables fj.Ai(gϵ(v, e)) in the
+optimization function. Speciﬁcally, the abstracted resources
+of fj.Ai(gϵ(v, e)) include the ﬂow path pthj, time slot Dj,
+frequency bandwidth Bj, transmission power pj, frequency
+ratio µj, and memory ratio χj. Thus,
+A = {pthj, Dj, Bj, pj, µj, χj}.
+(18)
+The design of reward function relies on the optimization
+goal described by Eq. (12). The more the goal is optimized,
+the better the reward can be obtained. To improve the
+efﬁciency of convergence, the reward shaping method is
+utilized to build the reward function. The reward shaping
+measures the gap between current and target scheduling
+performance in two consecutive steps. Thus, the reward
+function is described by
+ζt+1 = |Ft+1 −Ξ| −β|Ft −Ξ|,
+(19)
+where the coefﬁcient β ∈[0, 1]. The Ft is the real per-
+formance calculated by Eq. (12) at step t, and Ξ is the
+ideal status. Various goals can be mapped into Eq. (19). For
+example, to maximize the schedulable number of ﬂows, Ft
+should be the successfully scheduled ﬂow number at step t.
+Thus, we have
+Ft =
+|F|
+X
+j=1
+φ(fj),
+(20)
+and Ξ is the total ﬂow number |F|. For the task ﬂows with
+high computing power demand, the optimization goal tends
+to improve the load balance of ofﬂoaded task sizes in the
+distributed servers. We use the standard deviation to reﬂect
+the load balance. Thus, the load balance at step t is
+Ft =
+v
+u
+u
+u
+t 1
+Ns
+Ns
+X
+i=1
+
+Qvi
+|F|
+X
+j=1
+µj −1
+Ns
+Ns
+X
+k=1
+|F|
+X
+j=1
+µj × Qvk
+
+
+2
+,
+(21)
+where Ns is the number of computing servers, and Ξ ∼= 0 is
+the ideal status of load balance. When we have ξ optimiza-
+tion goals, the total reward is ζt+1 = Pξ
+n=1 ζ(n)
+t+1, where ζ(n)
+t+1
+is the shaping reward for each goal.
+4
+DRL-BASED
+END-TO-END
+DETERMINISTIC-
+RELATED RESOURCE SCHEDULING ALGORITHM
+This section introduces our shining points and work-
+ing mechanism of the E2eDRS algorithm implemented
+in the computing module. In both horizontal and verti-
+cal end-to-end deterministic-related network architectures,
+E2eDRS can intelligently schedule the deterministic-related
+resources from end to end. As such, the end-to-end de-
+terministic ﬂow transmission can be guaranteed, and the
+optimization problem can be well-solved.
+4.1
+Shining Points
+For simplicity, the one-dimensional array O combined by
+Onet and Oflow can directly act as the input state of E2eDRS.
+However, the scheduling performance is hard to reach
+our expectation mainly because of two reasons. Firstly, the
+deterministic-related resource scheduling through network
+is time-correlated. Nevertheless, O only focuses on the
+scheduled resources and ignores the relationship between
+time sequence and deterministic-related resources. As a
+result, the temporal pattern of resource scheduling cannot
+be well-learned, which degrades the network performance.
+Secondly, the end-to-end resource scheduling relies on prop-
+erly allocating the available resources to each ﬂow along its
+path. But O only pays attention to the resource consumption
+on each link or node. It cannot well reﬂect the scheduled
+resources over the ﬂow path. To overcome the above two
+deﬁciencies, we build an end-to-end resource consumption
+matrix, which can store the utilization of time-correlated
+resources along each ﬂow path.
+Shining point 1: Build end-to-end resource consumption ma-
+trix. Considering the deterministic-related resource schedul-
+ing is time-correlated, the end-to-end resource consumption
+matrix is assigned two dimensions. One dimension, i.e.,
+each row of matrix, counts the time sequence of cycle time,
+where the cycle time for deterministic service is deﬁned as
+the granularity of scheduling [33] in IEEE 802.1Q standards.
+The other dimension, i.e., each column of matrix, marks each
+link and node along the ﬂow path. This matrix is embedded
+into the observation of E2eDRS algorithm. When a ﬂow
+consumes the available resources at each cycle, the resource
+utilization along the ﬂow path in the matrix can be updated,
+and the temporal pattern of resource scheduling can be well-
+learned. To observe each network state described by Eq. (16),
+multiple channels are introduced for the matrix. As shown
+in Fig. 2, the ﬁrst channel includes the utilization of link
+capacity HCℓand CPU frequency HQvi on each node. The
+second channel represents the energy utilization HEvi on
+the node, and the other positions are padded with zero.
+The memory resource consumption HMvi of each node
+is stored by the third channel. This matrix can also assist
+E2eDRS extending into more generic time-related network
+resource scheduling scenarios, such as joint time-frequency
+domain scheduling, or other types of TDMA based resource
+scheduling in converged network.
+7
+0
+. . .
+. . .
+T0
+m
+T1
+T2
+T3
+T4
+Tt
+0
+.........
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+...
+...
+...
+...
+...
+...
+0.62
+0.62
+0.32
+0.32
+0.55
+0.55
+0.38
+0.38
+0.12
+0.12
+0.89
+0.89
+0.91
+0.91
+0.75
+0.75
+0.66
+0.66
+0.43
+0.43
+0.98
+0.98
+0.88
+0.88
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+...
+...
+...
+...
+...
+...
+0.22
+0.22
+0.15
+0.15
+0.95
+0.95
+0.98
+0.98
+0.12
+0.12
+0.59
+0.59
+0.15
+0.15
+0.62
+0.62
+0.92
+0.92
+...
+...
+...
+...
+...
+...
+0.22
+0.22
+0.15
+0.15
+0.95
+0.95
+0.98
+0.98
+0.12
+0.12
+0.01
+0.01
+0.15
+0.15
+0.61
+0.61
+0.51
+0.51
+0.59
+0.59
+0.76
+0.76
+0.66
+0.66
+0.88
+0.88
+0.98
+0.98
+0.44
+0.44
+0.31
+0.31
+0.22
+0.22
+0.39
+0.39
+0.07
+0.07
+0.33
+0.33
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+...
+0.46
+0.46
+0.78
+0.78
+0.80
+0.80
+0.53
+0.53
+0.20
+0.20
+0.64
+0.64
+0.44
+0.44
+0.94
+0.94
+0.29
+0.29
+0.79
+0.79
+0.91
+0.91
+0.35
+0.35
+0.06
+0.06
+0.72
+0.72
+0.12
+0.12
+0.97
+0.97
+0.27
+0.27
+0.83
+0.83
+0.66
+0.66
+0.19
+0.19
+0.03
+0.03
+0.85
+0.85
+0.94
+0.94
+0.39
+0.39
+0.55
+0.55
+0.85
+0.85
+0.99
+0.99
+0.62
+0.62
+0.26
+0.26
+0.99
+0.99
+0.39
+0.39
+0.41
+0.41
+0.37
+0.37
+0.74
+0.74
+0.71
+0.71
+0.65
+0.65
+0.15
+0.15
+0.21
+0.21
+0.04
+0.04
+0.54
+0.54
+m
+v
+1
+1v
+0
+v
+0
+. . .
+. . .
+Fig. 2. Diagram of end-to-end resource consumption matrix.
+The time slot constraints of Eq. (6) and Eq. (7) are very
+important to avoid the packet conﬂict during the same
+time. Note that the packet conﬂict can greatly decrease the
+number of schedulable ﬂows. To satisfy with the time slot
+constraints, the agent needs to know which time slot on the
+link is valid for sending the coming ﬂow under the current
+state. Thus, the shining point 2 is designed.
+Shining point 2: Set up collaboratively working mechanism
+between network states and actions. To help the agent avoid
+packet conﬂict from different ﬂows, choosing valid time slot
+for sending each ﬂow is necessary. Therefore, an action array
+is embedded into the observation to collaboratively working
+with the network states. In the action array, the actions for
+choosing valid time slots are encoded by 1, while the invalid
+ones are set to zero. As such, the agent can identify the valid
+time slots and accommodate more ﬂows.
+To
+support
+both
+horizontal
+and
+vertical
+end-to-
+end
+deterministic-related
+network
+architectures,
+the
+deterministic-related resource scheduling in each gϵ(v, e)
+is needed. Therefore, the actions are grouped by gϵ(v, e),
+and the network with higher communication quality can be
+selected to transmit the ﬂows. This technique is described
+by shining point 3.
+Shining point 3: Set up the action groups. A vertical net-
+work consists of multiple horizontal networks with topolo-
+gy gϵ(v, e). Because a large number of deterministic-related
+resources are distributed into each gϵ(v, e), we need to ﬁgure
+out the relationship between each action and gϵ(v, e). As
+shown in Fig. 3, the neurons in output layer are chunked in-
+to multiple action groups. Each group maps a gϵ(v, e) in the
+vertical network. The horizontal end-to-end deterministic-
+related network architecture is a special case of vertical end-
+to-end deterministic-related network architecture such that
+ϵ = 1. It means one action group is enough to indicate the
+horizontal end-to-end deterministic-related network archi-
+tecture. Each action in different action groups are labeled
+by a(ϵ)
+i
+∈A, meaning that the resources are scheduled
+in gϵ(v, e). When the ﬂow path is decided, the network
+gϵ(v, e) is actually chosen to transmit the ﬂow. Then the
+corresponding action group takes effect, while the actions
+not belonging to this action group will be ignored.
+To further improve the network scheduling ability, the
+risk-aware mechanism is introduced. This mechanism can
+AP
+Data flow
+Data flow
+(
+)
+1
+,
+g
+v e
+AP
+S1
+S2
+S3
+S4
+BS
+AP
+Data flow
+(
+)
+1
+,
+g
+v e
+AP
+S1
+S2
+S3
+S4
+BS
+...
+pthj ...
+Mapping
+Mapping
+(1)
+j
+D
+group 1
+group 2
+(1)
+j
+B
+(1)
+jp
+(1)
+j
+
+(1)
+j
+
+( )
+n
+j
+D
+( )
+n
+j
+B
+( )
+n
+jp
+( )
+n
+j
+
+( )
+n
+j
+
+...
+Decision
+Decision
+AP
+Data flow
+Data flow
+S1
+S2
+S3
+S4
+BS
+Output layer
+(
+)
+,
+n
+g
+v e
+Fig. 3. Mechanism of action group selection and mapping policy be-
+tween different networks gϵ(v, e) and the action groups.
+assist the agent being aware of any risky actions decided
+by neural network at each step. The principle of risk-aware
+mechanism is demonstrated by shining point 4.
+Shining point 4: Risk-aware mechanism. In risk-aware
+mechanism, each action decided by neural network is e-
+valuated by 0-1 integer scores according to its impact on
+scheduling performance. Speciﬁcally, if the resource utiliza-
+tion limit is exceeded by taking the action decided at the
+current step, the agent will get score 0. To avoid scheduling
+failure, the agent needs to choose another action calculated
+by neural network until it gets score 1. The training loop will
+be ﬁnished when all the actions are marked by score 0. With
+this mechanism, the agent can spend fewer steps exploring
+better policies for improving the scheduling performance.
+4.2
+Working Mechanism of E2eDRS Algorithm
+The
+E2eDRS
+algorithm
+schedules
+the
+deterministic-
+related resources in horizontal and vertical end-to-end
+deterministic-related network architectures from end to end.
+Based on the pseudo codes of E2eDRS, the working mecha-
+nism can be summarized as follows.
+Initialization: In line 1-4 of Alg. 1, at the beginning of
+training process, the parameters of actor network and critic
+network are initialized by θ0 and υ0, respectively. In addi-
+tion, the replay buffer and training correlated parameters
+are initiated. A counter is set to mark the current step, and
+avoid exceeding the maximal size of replay buffer.
+Mapping between state and action: In line 5-16 of Alg.
+1, the input state ot embeds with the end-to-end resource
+consumption matrix and action array mentioned in shining
+point 1 and shining point 2, respectively. As such, the ot
+has four channels. The ﬁrst three channels are used to
+schedule different deterministic-related resources from end
+to end. For determinacy, the transmission delay between any
+two hops are bounded within a cycle time. To observe the
+resource utilization on each cycle time during the end-to-
+end ﬂow transmission, the number of rows in each channel
+should be equal to the hop count that the ﬂow goes through.
+The column number of each channel depends on the amount
+of links and nodes in the network. The resources utilization
+in Eq. (16) are contained in the three channels of matrix. The
+8
+last channel of ot maps the valid or invalid sending time
+slots under the current state.
+Based on ot, the agent makes an action decision ac-
+cording to the current optimal policy at = π∗
+θ0(ot). The
+policy mapping from O to A follows the Gaussian dis-
+tribution. Each value of resource scheduling decision in
+at is then scaled into a valid range. Alg. 2 describes the
+action decision process at each step. The input is original
+resource scheduling decisions grouped by gϵ(v, e), that is
+a0
+t = {ptht, D(ϵ)
+t , B(ϵ)
+t , p(ϵ)
+t , µ(ϵ)
+t , χ(ϵ)
+t }, where ϵ = 1, 2, . . . , n.
+In essence, each ﬂow path decision maps into the unique
+gϵ(v, e). Therefore, when the path is decided, only the
+resource decisions in the corresponding gϵ(v, e) can take
+effect. The key point is to ﬁnd the mapping relationship
+between the decided ptht and gϵ(v, e), which is described
+by line 1-15 in Alg. 2. Firstly, all the ﬂow paths with no loop
+are found for each gϵ(v, e). Then the network architecture
+set is built up, which consists of n horizontal networks.
+By iteratively searching the network architecture set, the
+mapping from ptht to gh(v, e) can be found. The other
+optimal resources scheduling decisions in gh(v, e) are set
+to ﬁnal decisions in line 16-17.
+State transition: Before taking the resource scheduling
+decision at, the risk-aware mechanism is introduced to
+avoid exceeding upper limit of resource capacity. In line 7-
+10 of Alg. 1, the agent evaluates the score of decided action
+at by interacting with the environment ofﬂine. If the action
+causes failure of resource scheduling due to exceeding the
+network resource limit, the score is marked by 0, and the
+agent needs to evaluate the score of another action re-
+calculated by neural network with Gaussian noise based
+on the same input state. If the action at can maintain the
+iteration loop of the algorithm during resource scheduling
+process, the score is marked by 1, and at with score 1 is taken
+by the agent. If all the actions are marked by score 0, the
+agent performs at with score 0 and the current iteration loop
+is ﬁnished. After the action is taken, an immediate reward
+can be obtained, and the state is transited to ot+1.
+The state transition is described by Alg. 3 in detail. Ac-
+cording to the sending time of each ﬂow and time sequence
+along the ﬂow path, the end-to-end resource utilization can
+be ﬁlled into the state matrix. Speciﬁcally, the sending time
+and slot length decisions are related to time slot resources.
+Therefore, we have Dt = {DT
+t , Di
+t}, where DT
+t
+and Di
+t
+are sending time slot and slot length for ﬂow transmission
+on each hop, respectively. Due to the bounded latency of
+passing through each hop, we use the link-node pairs to
+indicate a full ﬂow path, that is ptht = {(ℓj, vj)}, where
+j = 1, 2, . . . , m. When the ﬂow goes through a link-node
+pair, the sequence number of DT
+t plus 1. On each link-node
+pair, the state of four channels are updated. Let Sc(Di
+t) and
+Sp(Di
+t) be the link capacity and CPU frequency resource
+utilization within time slot Di
+t, respectively. Line 3-5 of
+Alg. 3 updates the total link capacity and CPU frequency
+usage on line DT
+t . By calculating the current utilization of
+computing energy resource Se(Di
+t), line 6-7 updates the
+total computing energy usage on each node. According to
+the memory utilization Sm(Di
+t) at current step, line 8-9
+updates the total memory usage on each node. Line 10-
+15 updates the action array, where the valid sending time
+Algorithm 1: DRL-based End-to-end Deterministic-
+related Resource Scheduling Algorithm.
+Input: Initial parameters θ0 of actor network, initial
+parameter υ0 of critic network, buffer size ℑ,
+trajectory length T.
+Output: Optimal policy π∗: O →A.
+1 θ ←θ0; υ ←υ0; count ←0;
+2 for iter ∈{0, 1, 2, . . . , m} do
+3
+Initialize the state o;
+4
+done ←False;
+5
+while not done do
+6
+Embed end-to-end resource consumption
+matrix and action array into ot;
+7
+Generate deterministic-related resource
+scheduling actions by using Alg. 2;
+8
+Evaluate score for each action at ∈A by
+interacting with environment ofﬂine;
+9
+Try to perform the action with score=1;
+10
+Perform the action at decided at the beginning
+if all actions are marked by score 0;
+11
+Obtain an immediate reward ζt+1 and transit
+state to ot+1 by Alg. 3;
+12
+if (Dissatisfy constraints Eq. (3)-Eq. (11))|(All
+ﬂows are scheduled) then
+13
+done ←True;
+14
+end
+15
+Store tuple (ot, at, ζt+1, ot+1, done) into the
+count-th line of replay buffer;
+16
+count ←count + 1;
+17
+if count == ℑthen
+18
+count ←0;
+19
+Collect set of trajectories Dk = {τi} from
+replay buffer;
+20
+for each trajectory τ ∈Dk do
+21
+Deﬁne
+δt ←ζt+1 + ωVυ0(ot+1) −Vυ0(ot);
+22
+Compute advantage estimates ˆAt for
+each ot ∈τ started by step t0:
+ˆAt ←Pt0+T −1−t
+l=0
+(λω)lδt+l;
+23
+Update θ of actor network by
+maximizing the objective:
+J(θ) = 1
+T
+Pt0+T −1
+t=t0
+min
+h
+πθ(at|st)
+πθ0(at|st) ˆAt,
+clip( πθ(at|st)
+πθ0(at|st), 1 −ϵ, 1 + ϵ) ˆAt
+i
+, via
+stochastic gradient ascent step;
+24
+Update υ of critic network by
+minimizing the loss: L(υ) =
+1
+T
+Pt0+T −1
+t=t0
+(Vυ0(ot) + ˆAt −Vυ(ot))2,
+via stochastic gradient descent step;
+25
+end
+26
+θ0 ←θ; υ0 ←υ;
+27
+end
+28
+if done then
+29
+break;
+30
+end
+31
+end
+32 end
+9
+slots for the coming ﬂow are encoded by 1. As a result, the
+next state ot+1 is composed by the four channels, that is
+ot+1 = {o1
+t+1, o2
+t+1, o3
+t+1, o4
+t+1} in line 19.
+Furthermore, line 15-19 of Alg. 1 checks the shutdown
+criteria, and stores the state transition tuple into the replay
+buffer. The counter records current step count.
+Training approach: Line 17-32 of Alg. 1 shows the train-
+ing process of E2eDRS algorithm. The agent collects set of
+trajectories from the replay buffer. Each trajectory length is
+set to T, where T < ℑ. For a trajectory that starts with step
+t0, E2eDRS updates the actor network by optimizing the
+policy πθ : O →A with the following function.
+J(θ) = 1
+T
+t0+T −1
+X
+t=t0
+min
+h
+rt(θ) ˆAt, clip(rt(θ), 1 −ϵ, 1 + ϵ) ˆAt
+i
+,
+(22)
+where rt(θ) =
+πθ(at|st)
+πθ0(at|st) represents the gap between old
+and new policies. The advantage function ˆAt guides the
+direction of policy update. The ˆAt is deﬁned as
+ˆAt =
+t0+T −1−t
+X
+l=0
+(λω)lδt+l,
+(23)
+where δt = ζt+1 + ωVυ0(ot+1) −Vυ0(ot). When ˆAt > 0,
+it encourages the current policy update by increasing the
+probability πθ(at|st). When ˆAt < 0, it reduces the probabil-
+ity πθ(at|st). To prevent the excessive update of policy, the
+clip mechanism is introduced to limit the policy gap rt(θ)
+into [1−ϵ, 1+ϵ]. To update the parameters in critic network,
+we compute the difference between the target and evaluate
+state values as the loss function, which is
+L(υ) = 1
+T
+t0+T −1
+X
+t=t0
+
+Vυ0(ot) + ˆAt −Vυ(ot)
+2
+.
+(24)
+After updating the neural networks, the old parameters
+θ0 and υ0 are replaced by the new ones θ and υ.
+5
+PERFORMANCE EVALUATION
+This section lists the simulation settings of horizontal
+and vertical scheduling scenarios, and the performance
+of E2eDRS is evaluated in different network architectures.
+The training environment is built on Ubuntu 20.04 (kernel
+5.11.0-41-generic) system with Python implementation. We
+implement the algorithms on the central controller with
+high-performance hardwares CPU (AMD R9 5950X), GPU
+(NVIDIA QUADRO RTX 6000), and 64GB Kingston RAM.
+5.1
+Horizontal Scheduling Scenario
+Settings for horizontal end-to-end deterministic-related
+network
+architecture: We use the application-oriented
+TSN-5G network to simulate the horizontal end-to-end
+deterministic-related network architecture. The benchmark
+topology is shown in Fig. 4. The TSN hosts are accessed
+through wired TSN. According to 3rd Generation Part-
+nership Project (3GPP), 5GS is conﬁgured as a logical
+TSN switch to seamlessly transmit data forwarded by
+the upstream TSN switches [34]. Device-side (DS-TT) and
+network-side (NS-TT) TSN translators in 5G network are
+used to control the sending time of TT ﬂows and achieve the
+Algorithm 2: Generation of actions at each step.
+Input: Original action
+a0
+t = {ptht, D(ϵ)
+t , B(ϵ)
+t , p(ϵ)
+t , µ(ϵ)
+t , χ(ϵ)
+t }
+determined by actor network according to
+current optimal policy a0
+t = π∗
+θ0(ot) + N .
+Output: Choosed action at.
+1 ﬁnd all paths {pth1, pth2, . . . , pthk} with no loop for
+each gϵ(v, e);
+2 Create network architecture set
+N = {g1(v, e), g2(v, e), . . . , gn(v, e)};
+3 dw ←0; h ←0;
+4 for i ∈{0, 1, 2, . . . , n −1} do
+5
+for j ∈{0, 1, 2, . . . , N[i].length −1} do
+6
+if ptht == N[i][j] then
+7
+h ←i + 1;
+8
+dw ←1;
+9
+break;
+10
+end
+11
+end
+12
+if dw then
+13
+break;
+14
+end
+15 end
+16 Choose the action from a0
+t that belongs to gh(v, e):
+Dt ←D(h)
+t
+; Bt ←B(h)
+t
+; pt ←p(h)
+t
+; µt ←µ(h)
+t
+;
+χt ←χ(h)
+t
+;
+17 at ←{ptht, Dt, Bt, pt, µt, χt};
+Algorithm 3: State Transition Approach.
+Input: Current state ot = {o1
+t, o2
+t, o3
+t, o4
+t}, action
+at = {ptht, Dt, Bt, pt, µt, χt}, where
+ptht = {(ℓj, vj)}, Dt = {DT
+t , Di
+t}.
+Output: Next state ot+1.
+1 for i ∈{0, 1, 2, . . . , ptht.length −1} do
+2
+for j ∈{0, 1, 2, . . . , ptht.length −1} do
+3
+Update channel 1 by:
+4
+o1
+t+1[DT
+t ][ptht[j].ℓ] ←
+o1
+t[DT
+t ][ptht[j].ℓ] + Sc(Di
+t);
+5
+o1
+t+1[DT
+t ][ptht[j].v] ←
+o1
+t[DT
+t ][ptht[j].v] + Sp(Di
+t);
+6
+Update channel 2 by:
+7
+o2
+t+1[DT
+t ][ptht[j].v] ←
+o2
+t[DT
+t ][ptht[j].v] + Se(Di
+t);
+8
+Update channel 3 by:
+9
+o3
+t+1[DT
+t ][ptht[j].v] ←
+o3
+t[DT
+t ][ptht[j].v] + Sm(Di
+t);
+10
+Update channel 4 by:
+11
+if check valid(DT
+t , ot) then
+12
+o4
+t+1[DT
+t , :] ←1;
+13
+else
+14
+o4
+t+1[DT
+t , :] ←0;
+15
+end
+16
+end
+17
+DT
+t ←DT
+t + 1;
+18 end
+19 Assign the channels to ot+1 by:
+ot+1 ←{o1
+t+1, o2
+t+1, o3
+t+1, o4
+t+1};
+10
+gNB
+S5
+G1
+G2
+H1
+H2
+H3
+H4
+S1
+S2
+S3
+S4
+C1
+C2
+C3
+TSN
+5G System
+TSN
+DS-TT
+DS-TT
+NS-TT
+Fig. 4. Horizontal scheduling scenario in a TSN-5G network.
+TABLE 1
+TSN-5G network parameters.
+5G Network
+Wired TSN
+5G bandwidth
+40 MHz
+Link bandwidth
+1000 Mbps
+Frequency band
+3.7∼3.8 GHz
+Cycle time
+{1,2,4}ms
+5G TTI
+1 ms
+Packet size
+50 B∼1 KB
+BS power
+40 dBm
+Flow periods
+{4,8,16}ms
+Gateway power
+20 dBm
+C1 frequency
+4.2 GHz
+5G distance
+100 m
+C2 frequency
+2.4 GHz
+Noise power
+-104 dBm
+C3 frequency
+10 GHz
+deterministic transmission. We use the CQF mechanism to
+guarantee the deterministic ﬂow transmission over the TSN-
+5G network. The link bandwidth of wired TSN is 1000Mbps.
+The CPU frequencies of servers are 4.2GHz, 2.4GHz, and
+10GHz, respectively. 1,000 TT ﬂows are generated from TSN
+hosts H1 ∼H4, and they are sent to high-performance
+servers C1 ∼C3. The ﬂow size is set to 50B∼1KB [35], and
+the ﬂow periods include {4ms, 8ms, 16ms}. The transmitted
+TT ﬂows have different cpu frequency requirements that
+obey the normal distribution with mean value of 16MHz
+and variance of 3. The cycle time should be smaller than
+maximum common divisor of ﬂow periods. Hence, the cycle
+time is set to {1ms, 2ms, 4ms}.
+In 5G network, 14 OFDM symbols are included during
+a transmission time interval (TTI) with 15kHz sub-carrier
+spacing, which means the TTI is 1ms. We use 3.7∼3.8GHz
+frequency band, and the system bandwidth is 40MHz. The
+power of 5G base station (BS) is set to 40dBm, while the
+transmitting power of gateway is 20dBm. The 5G channel
+gain is described by indoor hotspot LOS scenario [36], which
+is PL(dB) = 32.4+17.3 log10(l5G)+20 log10(fc), where we
+set l5G = 100m denoting the distance between sensors and
+BS. In addition, the Gaussian noise power is -104dBm. Table
+1 lists the network parameters in detail.
+Formulation of optimization problem: Based on Eq.
+(12), our optimization goals are to optimize the schedulable
+TABLE 2
+Parameters for learning algorithms.
+Learning para.
+Value
+Learning para.
+Value
+Optimizer
+Adam
+Buffer size
+2048
+Episode number
+1e6
+Trajectory length
+64
+Kernel size
+3×3
+Coefﬁcient a
+-1
+Dk length
+10
+Coefﬁcient b
+-0.8
+Discounting factor λ
+0.99
+Learning rate lra
+3e-4
+Discounting factor ω
+0.95
+Learning rate lrc
+3e-4
+number of ﬂows and load balance of computing resource
+utilization. Our designed reward function can intuitively
+reﬂect the quality of optimization performance. By substi-
+tuting the ﬂow number statistic function of Eq. (20) into
+reward function of Eq. (19), the reward ζ1
+t+1 of scheduled
+ﬂows can be obtained. Similarly, reward ζ2
+t+1 of load balance
+can be acquired by substituting the load balance statistic
+function of Eq. (21) into Eq. (19). To improve the scheduling
+performance, the rewards need to be optimized. Hence, the
+optimization goals can be achieved by
+Maximize
+a × ζ1
+t+1 + b × ζ2
+t+1,
+(25)
+where a, b are weights of each objective function. Besides,
+the deterministic transmission constraints need to satisfy
+with Eq. (3)-Eq. (11). Thus, it is subject to
+ Deterministic transmssion constraints Eq. (3)-Eq. (5);
+Network resource constraints Eq. (6)-Eq. (11).
+(26)
+Settings for E2eDRS algorithm: To extract the features
+of input matrix, E2eDRS uses two convolution layers, each
+layer has 3 × 3 kernel size. Due to the horizontal end-to-
+end deterministic-related network architecture, the action
+group is set to 1. The training episode is set to 1e6. In
+each episode, the agent needs to experience a complete state
+sequence. Based on our experience, the replay buffer size
+is 2048 to accommodate enough trajectories. The sampled
+trajectory length is set to 64. To perceive the long-term
+reward, the discounting factors λ and ω are set to 0.99 and
+0.95, respectively. We use the Adam optimizer to update
+the actor and critic networks, and the learning rate lra and
+lrc for actor and critic networks are both 3e-4. The detailed
+parameter description is shown in Table 2.
+We compare E2eDRS with the traditional non end-to-
+end DRL-based scheduling algorithm, namely multi-private
+deterministic-related resource scheduling (MultiDRS) ap-
+proach. MultiDRS implements the private algorithm for
+each part of network in TSN-5G system. Speciﬁcally, Mul-
+tiDRS uses state-of-the-art algorithm, TimeDRS, reproduced
+from [17] for wired TSN network, and the K-DDPG resource
+scheduling algorithm [37] for 5G network. The training
+parameters of MultiDRS are the same with E2eDRS.
+The scheduling results and analysis of horizontal end-
+to-end deterministic-related network architecture are de-
+scribed as follows.
+Training effectiveness:
+The training processes of dif-
+ferent algorithms are shown in Fig. 5(a) and Fig. 5(b).
+For every 5e3 training episodes, we set a checkpoint. Fig.
+5(a) depicts the total reward on each check point. E2eDRS
+obtains the highest reward compared with the MultiDRS
+and MultiNaive scheduling approaches. In addition, the
+reward variance of E2eDRS is much more smaller than
+MultiDRS after reaching the convergence. This is because
+the global end-to-end deterministic scheduling of E2eDRS
+can collaboratively allocate various resources across hetero-
+geneous networks. Different algorithms in MultiDRS only
+pursue the maximal reward in their own networks, none
+of an algorithm takes care of the global network resources
+utilization. Even if it reaches the optimal in a single net-
+work, it is still difﬁcult to achieve the overall optimal from
+end to end. The MultiNaive algorithm randomly schedules
+11
+0
+50
+100
+150
+200
+Checkpoints
+0
+200
+400
+600
+800
+1000
+Rewards
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+E2eDRS
+MultiDRS
+MultiNaive
+(a)
+0
+50
+100
+150
+200
+Checkpoints
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+Server load balance
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+E2eDRS
+MultiDRS
+MultiNaive
+(b)
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+200
+400
+600
+800
+1000
+Number of Flows
+0
+0.5
+1
+1.5
+2
+2.5
+3
+Time Cost (s)
+E2eDRS
+MultiNaive
+MultiDRS
+(c)
+1000 Flows | Periods=[4ms,8ms,16ms]
+1 ms
+4 ms
+2 ms
+Cycle Time (ms)
+0
+200
+400
+600
+800
+1000
+Scheduled Number
+E2eDRS
+MultiDRS
+MultiNaive
+(d)
+1000 Flows | Cycle time=4ms
+E2eDRS
+MultiDRS
+MultiNaive
+Scheduling Approaches
+0
+200
+400
+600
+800
+1000
+Scheduled Number
+periods=[4ms,8ms,16ms]
+periods=[4ms,16ms]
+periods=[8ms,16ms]
+(e)
+1000 Flows | Periods=[4ms,8ms,16ms]
+1 ms
+4 ms
+2 ms
+Cycle Time (ms)
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+Server Load Balance
+MultiNaive
+MultiDRS
+E2eDRS
+(f)
+Fig. 5. Horizontal scheduling results. (a) Rewards on each checkpoint; (b) Load balance on servers; (c) Computational time cost of various resource
+scheduling algorithms; (d) Scheduled ﬂow number with different cycle time; (e) Scheduled ﬂow number with different ﬂow periods; and (f) Server
+load balance with different cycle time.
+the deterministic-related resources in each part of network.
+Although the computational time is short for MultiNaive,
+its obtained rewards steadily maintain at lower values.
+Fig. 5(b) shows the training process of computing
+resource load balance on each high-performance server.
+E2eDRS hits the smallest standard deviation on load bal-
+ance, which means the training performance of E2eDRS is
+the best among them. However, the variance of MultiDRS is
+too large to meet our expectations. Even the average reward
+of MultiDRS is close to MultiNaive. As a result, MultiDRS
+is hard to achieve the trade-off between schedulable ﬂow
+number and server load balance.
+Computational time cost: The computational time cost
+of different scheduling approaches are depicted by Fig. 5(c).
+With the growing number of added ﬂows, the computation-
+al time cost of E2eDRS and MultiDRS are getting larger.
+Because the algorithm needs to spend more time steps
+to schedule these ﬂows. In addition, MultiDRS consists of
+multiple private algorithms for speciﬁc network, and it has
+more number of neural networks to compute. As a result,
+MultiDRS needs more time to make the inference. The
+computational time cost of MultiNaive steadily maintains
+at low value. This is because the scheduling ability is too
+limited for MultiNaive. No matter how many ﬂows are
+added into the network, MultiNaive can always schedule
+200 ﬂows on average. Thus, the running steps are almost
+the same at each time for scheduling.
+Flow scheduling ability: To evaluate the scalability of
+gNB1
+S5
+G1
+G2
+H1
+H2
+H3
+H4
+S1
+S2
+S3
+S4
+C1
+C2
+C3
+TSN
+5G System
+TSN
+DS-TT
+DS-TT
+NS-TT
+gNB2
+S6
+G3
+G4
+C4
+C5
+C6
+DS-TT
+DS-TT
+NS-TT
+Flows
+Flows
+(
+)
+1
+,
+g
+v e
+(
+)
+2
+,
+g
+v e
+Fig. 6. Vertical scheduling scenario consists of two paralleled horizontal
+end-to-end deterministic-related network architectures. During the ﬂow
+transmission process, the network with higher communication quality in
+the architecture can be selected to transmit the ﬂows.
+E2eDRS, we change the network parameters, including cy-
+cle time and ﬂow period to observe the scheduling per-
+formance of different approaches. In Fig. 5(d), E2eDRS can
+always schedule the maximal number of TT ﬂows with dif-
+ferent cycle time. The schedulable ﬂow number of E2eDRS
+averagely increases by 1.33x and 6.01x than MultiDRS and
+MultiNaive, respectively. Additionally, the cycle time can
+also impact the schedulable number of ﬂows. Fig. 5(d)
+12
+shows that each scheduling approach can schedule more
+ﬂows when the cycle time gets larger. For example, the
+number of ﬂows scheduled by MultiNaive, MultiDRS, and
+E2eDRS in 4ms cycle time increases by 51.54%, 25%, and
+6.14%, compared with the ﬂows scheduled during 1ms cycle
+time, respectively. Two main reasons can lead to this result.
+Firstly, larger cycle time enlarges its time slot capacity to
+accommodate more ﬂows. Secondly, the number of cycles
+decreases in a hyper period with the cycle getting large.
+The smaller number of cycles can reduce the searching dif-
+ﬁculty of scheduling algorithms. Therefore, the scheduling
+algorithms can schedule more ﬂows with a large cycle time.
+Impact of ﬂow periods: We evaluate the impact of differ-
+ent ﬂow periods in Fig. 5(e). Experimental results show that
+the scheduled ﬂow numbers are almost the same between
+ﬂow period {4ms, 8ms, 16ms} and {4ms, 16ms}, while the
+number of schedulable ﬂows is larger under the ﬂow period
+of {8ms, 16ms}. For MultiDRS and MultiNaive, the schedu-
+lable ﬂow number with period {8ms, 16ms} increases by
+11.32% and 59.39%, respectively compared with ﬂow period
+{4ms, 8ms, 16ms}. It demonstrates that the ﬂows with short-
+er period have more impact on scheduling ability because
+these ﬂows appear more frequently within a hyper period
+and they can occupy more time slot resources. Moreover,
+E2eDRS can also schedule the most number of ﬂows with
+different ﬂow periods. Fig. 5(e) shows that the schedulable
+ﬂow number of E2eDRS with various ﬂow periods grows
+by 1.19x and 4.17x on average compared with MultiDRS
+and MultiNaive, respectively.
+Server load balance: The scheduling performance on
+server load balance is evaluated in Fig. 5(f). The server
+load balance is measured by the standard deviation of
+computing resource utilization on each server based on Eq.
+(21). The E2eDRS can averagely optimize 2.65x and 3.87x
+value of server load balance than MultiDRS and MultiNaive,
+respectively. It illustrates that E2eDRS is good at learning
+the optimal resource allocation policy from a holistic per-
+spective. Furthermore, each scheduling approach performs
+well with the large cycle time. This is because less number
+of cycles within a hyper period can reduce the difﬁculty
+for scheduling approaches to search the optimal policy.
+Especially for E2eDRS, it can reduce the standard deviation
+of load balance by 62.79% by changing the cycle time from
+1ms to 2ms. The standard deviation with 4ms cycle time is
+2.06x lower than that with 2ms.
+5.2
+Vertical Scheduling Scenario
+Settings for vertical scheduling: The vertical scheduling
+scenario is to schedule the deterministic-related resources
+in vertical end-to-end deterministic-related network archi-
+tecture, which includes two paralleled horizontal networks
+g1(v, e) and g2(v, e) shown in Fig. 6. Hosts H1 ∼H4 can
+select a better horizontal network to send the ﬂows. Each
+horizontal network consists of TSN-5G system. To maintain
+the total computing resources, the CPU frequencies of each
+server C1 ∼C6 are set to 2.4GHz, 2.5GHz, 1.4GHz, 4.5GHz,
+4.8GHz, and 1GHz, respectively. Due to the vertical schedul-
+ing with n = 2, the action group of E2eDRS algorithm
+should be 2. The other network parameters are the same
+with Table 1 and Table 2. The objective goals of vertical
+scheduling are still to optimize the schedulable number of
+ﬂows and server load balance. Thus, the formulated opti-
+mization problem of this scheduling scenario is described
+by Eq. (25) and Eq. (26).
+The experimental results show that our proposed
+scheduling approach can be applied into the vertical end-
+to-end deterministic-related network architecture, and the
+scheduling performance is evaluated as follows.
+Training effectiveness: The training processes of total re-
+wards and server balance in vertical scheduling scenario are
+depicted by Fig. 7(a) and Fig. 7(b). After convergence, Fig.
+7(a) shows that E2eDRS can improve the number of schedu-
+lable ﬂows by 1.33x and 14.64x, respectively compared with
+MultiDRS and MultiNaive algorithms. With the advantage
+of globally end-to-end resource scheduling, E2eDRS has
+smaller reward variance than MultiDRS during training.
+However, the MultiNaive algorithm underperforms in ver-
+tical scheduling scenario. Compared with the horizontal
+scheduling scenario, the vertical scheduling of MultiNaive
+averagely reduces the reward value by 2.98x, which means
+the MultiNaive cannot well utilize the deterministic-related
+resources distributed in each paralleled horizontal network.
+Fig. 7(b) shows that E2eDRS can reduce 2.43x server load
+balance than MultiDRS. Because fewer ﬂows can be suc-
+cessfully scheduled by MultiNaive, each server is under the
+light loads. As such, the server load balance of MultiNaive
+is better than MultiDRS. Fortunately, E2eDRS can achieve
+the same load balance level with MultiNaive. This proves
+E2eDRS can make a good trade-off between schedulable
+ﬂow number and server load balance.
+Computational time cost: Fig. 7(c) compares the com-
+putational time cost of different algorithms in horizontal
+(n = 1) and vertical networks (n = 2), respectively. Because
+the scheduled ﬂow number can affect the computational
+time cost, E2eDRS and MultiDRS consume more time to
+compute the scheduling results with the increasing number
+of added ﬂows. Moreover, the scale of network topology can
+impact the computational time cost. For E2eDRS and Mul-
+tiDRS, the computational time cost with n = 2 is larger than
+that with n = 1 because the number of nodes is larger with
+n = 2. On the other hand, the MultiDRS has more private
+scheduling approaches to deal with each part of network
+in vertical end-to-end deterministic-related network archi-
+tecture. Hence, MultiDRS has larger computational time
+cost in vertical end-to-end deterministic-related network
+architecture. In contrast, the time cost of MultiNaive with
+n = 2 is shorter than that with n = 1. It is because the
+scheduled ﬂow number of MultiNaive in vertical scheduling
+scenario is much smaller than horizontal scheduling, and
+the ﬂow number has more effect on computational time of
+MultiNaive algorithm.
+Flow scheduling ability: As shown in Fig. 7(d), the
+E2eDRS can schedule the most number of TT ﬂows. Com-
+pared with MultiDRS and MultiNaive, the E2eDRS can
+averagely increase the schedulable ﬂow number by 1.44x
+and 18.2x, respectively in the vertical scheduling scenario.
+Similarly to the horizontal scheduling, the larger cycle time
+can accommodate more ﬂows in vertical network.
+Fig. 7(e) shows the server load balance scheduled by
+various algorithms. Different from the scheduling results in
+horizontal end-to-end deterministic-related network archi-
+13
+0
+50
+100
+150
+200
+Checkpoints
+0
+200
+400
+600
+800
+1000
+Rewards
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+E2eDRS
+MultiDRS
+MultiNaive
+(a)
+0
+50
+100
+150
+200
+Checkpoints
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+Server Load Balance
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+E2eDRS
+MultiDRS
+MultiNaive
+(b)
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+200
+400
+600
+800
+1000
+Number of Flows
+0
+0.5
+1
+1.5
+2
+2.5
+3
+3.5
+4
+Time Cost (s)
+E2eDRS (n=1)
+Naive (n=1)
+MultiDRS (n=1)
+E2eDRS (n=2)
+Naive (n=2)
+MultiDRS (n=2)
+(c)
+1000 Flows | Periods=[4ms,8ms,16ms]
+1 ms
+2 ms
+4 ms
+Cycle Time (ms)
+0
+200
+400
+600
+800
+1000
+Scheduled Number
+E2eDRS
+MultiDRS
+MultiNaive
+(d)
+1000 Flows | Periods=[4ms,8ms,16ms]
+1 ms
+2 ms
+4 ms
+Cycle Time (ms)
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+Server Load Balance
+E2eDRS
+MultiDRS
+MultiNaive
+(e)
+1000 Flows | Cycle time=4ms | Periods=[4ms,8ms,16ms]
+8
+10
+12
+14
+16
+18
+20
+Delay (ms)
+0
+50
+100
+Flow Number
+Latency of E2eDRS
+8
+10
+12
+14
+16
+18
+20
+Delay (ms)
+0
+50
+100
+Flow Number
+Latency of MultiDRS
+(f)
+Fig. 7. Vertical scheduling results. (a) Rewards on each checkpoint; (b) Server load balance on each checkpoint; (c) Computational time cost
+comparison of different algorithms; (d) Scheduled ﬂow number with different cycle time; (e) Server load balance with different cycle time; and (f)
+End-to-end latency comparison of different algorithms.
+tecture, MultiNaive achieves the best server load balance
+for vertical scheduling. This is because the MultiNaive
+schedules fewer number of TT ﬂows in vertical network so
+that the computing resource utilization on each server is too
+small. And the overall value of Eq. (21) can also be small.
+End-to-end latency comparison: The end-to-end trans-
+mission latency of TT ﬂows scheduled by E2eDRS and
+MultiDRS algorithms are depicted in Fig. 7(f). The E2eDRS
+algorithm focuses on the resource allocation from end to
+end. Hence, E2eDRS can globally plan the ﬂow sending
+time from source host, and then it transmits the ﬂows in
+high communication quality network with short paths. As
+such, the end-to-end latency scheduled by E2eDRS can be
+relatively small. In contrast, the MultiDRS algorithm focuses
+on the scheduling performance of each distributed network.
+To improve the schedulable ﬂow number in each network,
+MultiDRS tends to route each ﬂow to the path with sparse
+trafﬁc. Thus, the end-to-end latency of MultiDRS is almost
+73.16% larger than E2eDRS.
+6
+CONCLUSION
+In this paper, we have investigated the end-to-end deter-
+ministic guarantee problem across the whole converged
+network. To manage the end-to-end ﬂow transmission both
+in horizontal and vertical end-to-end deterministic-related
+network architectures, we have set up the global end-to-
+end control plane. By abstracting the deterministic-related
+network resources, the end-to-end deterministic-related re-
+source abstraction model has been established in control
+plane to guarantee the determinacy across the converged
+network. The resource abstraction can assist the model
+working well for different underlying technologies. To fully
+utilize the network resources in the model, the E2eDRS al-
+gorithm has been proposed to jointly schedule the resources
+for each ﬂow from end to end. Simulation results have
+demonstrated that our proposed method can achieve a good
+trade-off between computational time cost and schedula-
+bility for both horizontal and vertical scheduling scenario.
+Extended from the existing deterministic technologies that
+focus on time slot and frequency resources, our end-to-
+end deterministic-related resource abstraction model jointly
+considers more deterministic-related resources, such as rout-
+ing, power, computing, memory, and energy resources. Dif-
+ferent from the existing DRL-based scheduling algorithms
+only scheduling the resources in their isolated and ﬁxed
+networks, E2eDRS can focus on end-to-end deterministic-
+related resource scheduling over the converged network.
+In addition, E2eDRS can also support varying network
+dimensions both in horizontal and vertical end-to-end
+deterministic-related network architectures. For the future
+work, we will investigate how to conﬁgure the data plane
+for converged network to achieve end-to-end determinacy
+by considering more deterministic-related resources.
+14
+REFERENCES
+[1]
+J. Prados-Garzon, T. Taleb, and M. Bagaa, “Optimization of Flow
+Allocation in Asynchronous Deterministic 5G Transport Networks
+by Leveraging Data Analytics,” IEEE Trans. Mob. Comput., July
+2021.
+[2]
+Y. Zhang, Q. Xu, M. Li, C. Chen, and X. Guan, “QoS-Aware Map-
+ping and Scheduling for Virtual Network Functions in Industrial
+5G-TSN Network,” in Proc. IEEE GLOBECOM, Dec. 2021, pp. 1–6.
+[3]
+W. Quan, J. Yan, X. Jiang, and Z. Sun, “On-line Trafﬁc Scheduling
+Optimization in IEEE 802.1Qch based Time-Sensitive Networks,”
+in Proc. IEEE HPCC, Dec. 2020, pp. 369–376.
+[4]
+D. Yang, W. Zhang, Q. Ye, C. Zhang, N. Zhang, C. Huang,
+H. Zhang, and X. Shen, “DetFed: Dynamic Resource Scheduling
+for Deterministic Federated Learning over Time-sensitive Net-
+works,” IEEE Trans. Mob. Comput., Aug. 2023.
+[5]
+G. Patti, L. L. Bello, and L. Leonardi, “Deadline-aware Online
+Scheduling of TSN Flows for Automotive Applications,” IEEE
+Trans. Ind. Inf., June 2022.
+[6]
+D. Ginthr, J. von Hoyningen-Huene, R. Guillaume, and H. Schot-
+ten, “Analysis of Multi-user Scheduling in a TSN-enabled 5G
+System for Industrial Applications,” in Proc. IEEE ICII, Nov. 2019,
+pp. 190–199.
+[7]
+J. Krolikowski, S. Martin, P. Medagliani, J. Leguay, S. Chen,
+X. Chang, and X. Geng, “Joint Routing and Scheduling for Large-
+scale Deterministic IP Networks,” Comput. Commun., vol. 165, pp.
+33–42, Jan. 2021.
+[8]
+B. Wu, S. Wang, J. Wang, W. Tan, and Y. Liu, “Flexible Design on
+Deterministic IP Networking for Mixed Trafﬁc Transmission,” in
+Proc. IEEE ICC, May 2022, pp. 4360–4365.
+[9]
+D. Ginth¨or, R. Guillaume, M. Sch¨ungel, and H. D. Schotten, “Ro-
+bust End-to-end Schedules for Wireless Time-sensitive Networks
+under Correlated Large-scale Fading,” in Proc. IEEE WFCS, June
+2021, pp. 115–122.
+[10] D. Yang, K. Gong, J. Ren, W. Zhang, W. Wu, and H. Zhang, “TC-
+Flow: Chain Flow Scheduling for Advanced Industrial Applica-
+tions in Time-Sensitive Networks,” IEEE Network, vol. 36, no. 2,
+pp. 16–24, May 2022.
+[11] M. Li, S. Guo, C. Chen, C. Chen, X. Liao, and X. Guan, “DecAge:
+Decentralized Flow Scheduling for Industrial 5G and TSN Inte-
+grated Networks,” IEEE Trans. Netw. Sci. Eng., pp. 1–13, Aug. 2023.
+[12] X. Jiang, Y. Huang, J. Li, H. He, S. Chen, F. Yang, and J. Yang,
+“Spatio-Temporal Routing, Redundant Coding and Multipath
+Scheduling for Deterministic Satellite Network Transmission,”
+IEEE Trans. Commun., vol. 71, no. 5, pp. 2860–2875, May 2023.
+[13] S. Sudhakaran, K. Montgomery, M. Kashef, D. Cavalcanti, and
+R. Candell, “Wireless Time Sensitive Networking Impact on an
+Industrial Collaborative Robotic Workcell,” IEEE Trans. Ind. Inf.,
+vol. 18, no. 10, pp. 7351–7360, Feb. 2022.
+[14] G. Peng, S. Wang, Y. Huang, T. Huang, and Y. Liu, “Enabling
+Deterministic Tasks with Multi-Access Edge Computing in 5G
+Networks,” IEEE Commun. Mag., vol. 60, no. 8, pp. 36–42, July
+2022.
+[15] F. Song, L. Li, I. You, and H. Zhang, “Enabling Heterogeneous
+Deterministic Networks with Smart Collaborative Theory,” IEEE
+Network, vol. 35, no. 3, pp. 64–71, June 2021.
+[16] H. Zhang, B. Feng, and A. Tian, “A Systematic Review for Smart
+Identiﬁer Networking,” Sci. China Inf. Sci., vol. 65, no. 12, p.
+221301, Oct. 2022.
+[17] D. Yang, Z. Cheng, W. Zhang, H. Zhang, and X. Shen, “Burst-
+Aware Time-Triggered Flow Scheduling With Enhanced Multi-
+CQF in Time-Sensitive Networks,” IEEE/ACM Trans. Networking,
+vol. 31, no. 6, pp. 2809–2824, Apr. 2023.
+[18] Huawei
+Technologies
+Co.,
+Ltd.,
+“5GDN
+Industry
+White
+Paper,” https://www-ﬁle.huawei.com/-/media/corporate/pdf/
+news/5gdn-industry-white-paper-en.pdf, 2019.
+[19] M. C. Lucas-Esta˜n and J. Gozalvez, “Sensing-based Grant-free
+Scheduling for Ultra Reliable Low Latency and Deterministic
+beyond 5G Networks,” IEEE Trans. Veh. Technol., vol. 71, no. 4,
+pp. 4171–4183, Jan. 2022.
+[20] Y. M. Saputra, D. T. Hoang, D. N. Nguyen, and E. Dutkiewicz,
+“A Novel Mobile Edge Network Architecture with Joint Caching-
+delivering and Horizontal Cooperation,” IEEE Trans. Mob. Com-
+put., vol. 20, no. 1, pp. 19–31, Aug. 2019.
+[21] W. Zhang, D. Yang, H. Peng, W. Wu, W. Quan, H. Zhang, and
+X. Shen, “Deep Reinforcement Learning Based Resource Man-
+agement for DNN Inference in Industrial IoT,” IEEE Trans. Veh.
+Technol., vol. 70, no. 8, pp. 7605–7618, Mar. 2021.
+[22] Z. Cheng, D. Yang, W. Zhang, J. Ren, H. Wang, and H. Zhang,
+“DeepCQF: Making CQF Scheduling More Intelligent and Practi-
+cable,” in Proc. IEEE ICC, May 2022, pp. 1–6.
+[23] W. Zhang, D. Yang, W. Wu, H. Peng, N. Zhang, H. Zhang, and
+X. Shen, “Optimizing Federated Learning in Distributed Industrial
+IoT: A Multi-Agent Approach,” IEEE J. Sel. Areas Commun., vol. 39,
+no. 12, pp. 3688–3703, Oct. 2021.
+[24] Z. Li, H. Wan, Z. Pang, Q. Chen, Y. Deng, X. Zhao, Y. Gao,
+X. Song, and M. Gu, “An Enhanced Reconﬁguration for Deter-
+ministic Transmission in Time-Triggered Networks,” IEEE/ACM
+Trans. Networking, vol. 27, no. 3, pp. 1124–1137, Apr. 2019.
+[25] D. Yang, E. Cui, H. Wang, and H. Zhang, “EH-Edge–An Energy
+Harvesting-Driven Edge IoT Platform for Online Failure Predic-
+tion of Rail Transit Vehicles: A Case Study of a Cloud, Edge,
+and End Device Collaborative Computing Paradigm,” IEEE Veh.
+Technol. Mag., vol. 16, no. 2, pp. 95–103, Feb. 2021.
+[26] K. Gong, D. Yang, W. Zhang, and J. Ren, “An Efﬁcient Scheduling
+Approach for Multi-level Industrial Chain Flows in Time-sensitive
+Networking,” Comput. Networks, vol. 221, p. 109516, Feb. 2023.
+[27] H. Jiang, Z. Xiao, Z. Li, J. Xu, F. Zeng, and D. Wang, “An
+Energy-Efﬁcient Framework for Internet of Things Underlaying
+Heterogeneous Small Cell Networks,” IEEE Trans. Mob. Comput.,
+vol. 21, no. 1, pp. 31–43, June 2022.
+[28] W. Wu, C. Zhou, M. Li, H. Wu, H. Zhou, N. Zhang, X. Shen, and
+W. Zhuang, “AI-native Network Slicing for 6G Networks,” IEEE
+Wirel. Commun., vol. 29, no. 1, pp. 96–103, Feb. 2022.
+[29] Y. Shi, S. Xia, Y. Zhou, Y. Mao, C. Jiang, and M. Tao, “Vertical
+Federated Learning over Cloud-RAN: Convergence Analysis and
+System Optimization,” IEEE Trans. Wireless Commun., June 2023.
+[30] K. B. Letaief, Y. Shi, J. Lu, and J. Lu, “Edge Artiﬁcial Intelligence
+for 6G: Vision, Enabling Technologies, and Applications,” IEEE J.
+Sel. Areas Commun., vol. 40, no. 1, pp. 5–36, Nov. 2021.
+[31] W. Wu, N. Chen, C. Zhou, M. Li, X. Shen, W. Zhuang, and X. Li,
+“Dynamic RAN Slicing for Service-oriented Vehicular Networks
+via Constrained Learning,” IEEE J. Sel. Areas Commun., vol. 39,
+no. 7, pp. 2076–2089, Dec. 2020.
+[32] W. Wu, M. Li, K. Qu, C. Zhou, X. Shen, W. Zhuang, X. Li, and
+W. Shi, “Split Learning over Wireless Networks: Parallel Design
+and Resource Management,” IEEE J. Sel. Areas Commun., vol. 41,
+no. 4, pp. 1051–1066, Feb. 2023.
+[33] “IEEE Standard for Local and Metropolitan Area Networks –
+Bridges and Bridged Networks – Amendment 29: Cyclic Queuing
+and Forwarding,” IEEE Std. 802.1Qch-2017, pp. 1–30, June 2017.
+[34] 3GPP, “TS 23.501 V16.7.0 System Architecture for the 5G System,”
+Dec. 2020.
+[35] Industrial Internet Consortium, “Time Sensitive Networks for
+Flexible Manufacturing Testbed Characterization and Mapping of
+Converged Trafﬁc Types,” https://www.iiconsortium.org/pdf/
+IIC TSN Testbed Char Mapping of Converged Trafﬁc Types
+Whitepaper 20180328.pdf, Mar. 2019.
+[36] M. Series, “Guidelines for Evaluation of Radio Interface Technolo-
+gies for IMT-2020,” Report ITU, pp. 2412–0, Oct. 2017.
+[37] Z. Gu, C. She, W. Hardjawana, S. Lumb, D. McKechnie, T. Es-
+sery, and B. Vucetic, “Knowledge-Assisted Deep Reinforcement
+Learning in 5G Scheduler Design: From Theoretical Framework to
+Implementation,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp.
+2014–2028, May 2021.
+Zongrong Cheng (Student Member, IEEE) re-
+ceived the B.E. degree from the School of Au-
+tomation Engineering, Northeast Electric Power
+University, Jilin, China, in 2019. He is current-
+ly pursuing the Ph.D. degree in communication
+and information systems from Beijing Jiaotong
+University, Beijing, China. His current research
+focuses on industrial Internet of Things, deter-
+ministic networking, resource management, da-
+ta analytics, and deep reinforcement learning.
+15
+Dong Yang (Member, IEEE) received his Ph.D.
+in Communication Engineering from the School
+of Electronics and Information Engineering, Bei-
+jing Jiaotong University, China, in 2008. From
+March 2009 to July 2010, he worked as a post-
+doctoral researcher in Jnkping University and
+ABB Corporate Research, Sweden, where he
+participated in the standardization and innova-
+tion of industrial wireless sensor network. He is
+currently a Full Professor of Communication En-
+gineering and the Director of Intelligent Industry
+Network Research Institute at Beijing Jiaotong University. His current
+research interests focus on network architecture, Internet of Things,
+wireless sensor networks and data driven network resource manage-
+ment. He has authored or co-authored over 70 scientiﬁc publications in
+the ﬁeld of network and communication technologies. More than 20 of
+his invention patents were licensed to ZTE.
+He has been serving as the Associate Editor for IEEE Transactions
+on Mobile Computing and the Executive Editor for Transactions on
+Emerging Telecommunications Technologies (Wiley). He has served as
+the Guest editor for IEEE Transaction on Industrial Informatics in 2021.
+He has served as Co-chair of IEEE INFOCOM 2023 Workshop PerAI-
+6G, Session Chair of IEEE ICCT 2022, TPC member of IEEE MetaCom
+2023, etc.
+Weiting Zhang (Member, IEEE) earned the
+Ph.D. degree in Communication and Informa-
+tion Systems with the Beijing Jiaotong Univer-
+sity, Beijing, China, in 2021. From Nov. 2019
+to Nov. 2020, he was a visiting Ph.D student
+with the Department of Electrical and Computer
+Engineering, University of Waterloo, Canada. S-
+tarting from Dec. 2021, he works as an associate
+professor with the School of Electronic and Infor-
+mation Engineering, Beijing Jiaotong University.
+His research interests include industrial Internet
+of Things, deterministic networks, edge intelligence, and machine learn-
+ing for network optimization.
+Chuan Huang (Member, IEEE) received the
+Ph.D. degree in electrical engineering from
+Texas A&M University, College Station, USA, in
+2012. From August 2012 to July 2014, he was a
+Research Associate and then a Research Assis-
+tant Professor with Princeton University and Ari-
+zona State University, Tempe, respectively. He is
+currently an Associate Professor with the Chi-
+nese University of Hong Kong, Shenzhen. His
+current research interests include wireless com-
+munications and signal processing. He served
+as a Symposium Chair for IEEE GLOBECOM 2019 and IEEE ICCC
+2019 and 2020. He has been serving as an Editor for IEEE TRANSAC-
+TIONS ON WIRELESS COMMUNICATIONS, IEEE ACCESS, Journal
+of Communications and Information Networks, and IEEE WIRELESS
+COMMUNICATIONS LETTERS.
+Hongke Zhang (Fellow, IEEE) received the M.S.
+and Ph.D. degrees in Electrical and Communi-
+cation Systems from the University of Electron-
+ic Science and Technology of China, Chengdu,
+China, in 1988 and 1992, respectively. From
+1992 to 1994, he was a Postdoctoral Researcher
+with Beijing Jiaotong University, Beijing, China,
+where he is currently a Professor with the School
+of Electronic and Information Engineering and
+the Director of the National Engineering Lab
+on Next Generation Internet Technologies. His
+research has resulted in many papers, books, patents, systems, and
+equipment in the areas of communications and computer networks. He
+is the author of more than ten books and the holder of more than 70
+patents. Dr. Zhang is the Chief Scientist of the National Basic Research
+Program of China (973 Program) and has also served on the editorial
+boards of several international journals.
+Xuemin (Sherman) Shen (Fellow, IEEE) re-
+ceived the Ph.D. degree in electrical engineer-
+ing from Rutgers University, New Brunswick, N-
+J, USA, in 1990. He is a University Professor
+with the Department of Electrical and Comput-
+er Engineering, University of Waterloo, Canada.
+His research focuses on network resource man-
+agement, wireless network security, Internet of
+Things, 5G and beyond, and vehicular ad hoc
+and sensor networks. Dr. Shen is a registered
+Professional Engineer of Ontario, Canada, an
+Engineering Institute of Canada Fellow, a Canadian Academy of Engi-
+neering Fellow, a Royal Society of Canada Fellow, a Chinese Academy
+of Engineering Foreign Member, and a Distinguished Lecturer of the
+IEEE Vehicular Technology Society and Communications Society.
+Dr. Shen received the R.A. Fessenden Award in 2019 from IEEE,
+Canada, Award of Merit from the Federation of Chinese Canadian Pro-
+fessionals (Ontario) in 2019, James Evans Avant Garde Award in 2018
+from the IEEE Vehicular Technology Society, Joseph LoCicero Award in
+2015 and Education Award in 2017 from the IEEE Communications So-
+ciety, and Technical Recognition Award from Wireless Communications
+Technical Committee (2019) and AHSN Technical Committee (2013).
+He has also received the Excellent Graduate Supervision Award in 2006
+from the University of Waterloo and the Premiers Research Excellence
+Award (PREA) in 2003 from the Province of Ontario, Canada. He served
+as the Technical Program Committee Chair/Co-Chair for IEEE Globe-
+com16, IEEE Infocom14, IEEE VTC10 Fall, IEEE Globecom07, and
+the Chair for the IEEE Communications Society Technical Committee
+on Wireless Communications. Dr. Shen is the President Elect of the
+IEEE Communications Society. He was the Vice President for Technical
+& Educational Activities, Vice President for Publications, Member-at-
+Large on the Board of Governors, Chair of the Distinguished Lecturer
+Selection Committee, Member of IEEE Fellow Selection Committee of
+the ComSoc. Dr. Shen served as the Editor-in-Chief of the IEEE IoT
+JOURNAL, IEEE Network, and IET Communications.
